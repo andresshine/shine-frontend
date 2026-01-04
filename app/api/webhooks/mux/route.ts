@@ -55,13 +55,14 @@ async function handleAssetReady(data: any) {
   console.log("Asset ready:", assetId, "Playback ID:", playbackId);
 
   // Update recording in database
+  // @ts-ignore - Supabase type inference issue with update
   const { data: recording, error } = await supabase
     .from("recordings")
     .update({
-      video_status: "ready" as string,
-      mux_playback_id: playbackId as string,
+      video_status: "ready",
+      mux_playback_id: playbackId,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq("mux_asset_id", assetId)
     .select("id")
     .single();
