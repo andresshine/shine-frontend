@@ -26,16 +26,16 @@ export function CompletionOverlay({ onDone }: CompletionOverlayProps) {
 
         {/* Title */}
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-          That's it — you're all done! 🎉
+          That&apos;s it — you&apos;re all done! 🎉
         </h2>
 
         {/* Message */}
         <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-          Thank you so much for taking the time to share your story with us. Customers like you are what make partnerships truly special — you don't just use our product, you help shape it, champion it, and inspire others with your success.
+          Thank you so much for taking the time to share your story with us. Customers like you are what make partnerships truly special — you don&apos;t just use our product, you help shape it, champion it, and inspire others with your success.
         </p>
 
         <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-          We're so grateful to work with partners who take collaboration to the next level. Your insights mean the world to us! 💙
+          We&apos;re so grateful to work with partners who take collaboration to the next level. Your insights mean the world to us! 💙
         </p>
 
         {/* Done Button */}

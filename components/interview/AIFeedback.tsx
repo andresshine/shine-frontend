@@ -45,7 +45,7 @@ export function AIFeedback() {
                   </span>
                 </div>
                 <span className="text-gray-400">•</span>
-                <span>Click "Record Follow-Up" to continue</span>
+                <span>Click &quot;Record Follow-Up&quot; to continue</span>
               </div>
             </div>
           </div>

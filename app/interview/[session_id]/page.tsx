@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { InterviewProvider } from "@/components/providers/InterviewProvider";
 import { QuestionsSidebar } from "@/components/interview/QuestionsSidebar";
@@ -134,28 +135,28 @@ export default function InterviewPage() {
           </p>
           <ul className="mt-2 space-y-1 text-sm">
             <li>
-              <a
+              <Link
                 href="/interview/session_abc123"
                 className="text-brand-primary hover:underline"
               >
                 session_abc123
-              </a>
+              </Link>
             </li>
             <li>
-              <a
+              <Link
                 href="/interview/session_xyz789"
                 className="text-brand-primary hover:underline"
               >
                 session_xyz789
-              </a>
+              </Link>
             </li>
             <li>
-              <a
+              <Link
                 href="/interview/session_demo"
                 className="text-brand-primary hover:underline"
               >
                 session_demo
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

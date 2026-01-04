@@ -207,7 +207,7 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
           {/* Transcript preview (optional, can be hidden) */}
           {answerEvaluation.transcript && (
             <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 line-clamp-2 italic">
-              "{answerEvaluation.transcript.slice(-150)}..."
+              &quot;{answerEvaluation.transcript.slice(-150)}...&quot;
             </p>
           )}
         </div>

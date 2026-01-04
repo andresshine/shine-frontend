@@ -3,6 +3,8 @@
  * Simple redirect/info page
  */
 
+import Link from 'next/link';
+
 export default function HomePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
@@ -19,7 +21,7 @@ export default function HomePage() {
             Demo Sessions
           </h2>
           <div className="space-y-2">
-            <a
+            <Link
               href="/interview/session_abc123"
               className="block p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
             >
@@ -29,9 +31,9 @@ export default function HomePage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Acme Corp - 12 questions (gradient style)
               </p>
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/interview/session_xyz789"
               className="block p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
             >
@@ -41,9 +43,9 @@ export default function HomePage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 TechStartup Inc - 5 questions (solid style)
               </p>
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/interview/session_demo"
               className="block p-3 rounded-lg bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors"
             >
@@ -53,7 +55,7 @@ export default function HomePage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Demo Company - 6 questions (default)
               </p>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

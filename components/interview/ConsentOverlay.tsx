@@ -36,7 +36,7 @@ export function ConsentOverlay({ onAccept, onCancel }: ConsentOverlayProps) {
 
         {/* We'll record section */}
         <div className="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-6 mb-4">
-          <h3 className="text-gray-900 dark:text-white font-medium mb-3">We'll record:</h3>
+          <h3 className="text-gray-900 dark:text-white font-medium mb-3">We&apos;ll record:</h3>
           <ul className="space-y-2 text-gray-700 dark:text-gray-300 text-sm">
             <li className="flex items-start">
               <span className="mr-2">•</span>
@@ -63,7 +63,7 @@ export function ConsentOverlay({ onAccept, onCancel }: ConsentOverlayProps) {
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
-              <span>We'll ask for separate consent before publishing</span>
+              <span>We&apos;ll ask for separate consent before publishing</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2">•</span>
