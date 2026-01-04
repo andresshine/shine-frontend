@@ -58,10 +58,10 @@ async function handleAssetReady(data: any) {
   const { data: recording, error } = await supabase
     .from("recordings")
     .update({
-      video_status: "ready",
-      mux_playback_id: playbackId,
+      video_status: "ready" as string,
+      mux_playback_id: playbackId as string,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq("mux_asset_id", assetId)
     .select("id")
     .single();
