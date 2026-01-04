@@ -1,0 +1,167 @@
+/**
+ * ElevenLabs Conversational AI Agent Service
+ * Interacts with the agent for interview evaluation
+ */
+
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+
+// Use require for CommonJS modules that Webpack struggles with
+const { Conversation } = require('@elevenlabs/elevenlabs-js/api/resources/conversationalAi/conversation/Conversation');
+const { AudioInterface } = require('@elevenlabs/elevenlabs-js/api/resources/conversationalAi/conversation/AudioInterface');
+
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
+const AGENT_ID = process.env.ELEVENLABS_AGENT_ID || '';
+
+export interface AgentEvaluationResponse {
+  decision: 'APPROVED' | 'FOLLOW_UP';
+  followUpText?: string;
+  reasoning: string;
+  score?: number;
+}
+
+/**
+ * Silent Audio Interface for text-only conversations
+ * Required by the SDK but we don't actually need audio
+ */
+class SilentAudioInterface extends AudioInterface {
+  start(inputCallback: (audio: Buffer) => void): void {
+    // No-op: text-only mode doesn't need audio input
+  }
+
+  stop(): void {
+    // No-op: nothing to clean up
+  }
+
+  output(audio: Buffer): void {
+    // No-op: we don't play audio output
+  }
+
+  interrupt(): void {
+    // No-op: nothing to interrupt
+  }
+}
+
+/**
+ * Evaluate a candidate's answer using the ElevenLabs Conversational AI agent
+ */
+export async function evaluateWithAgent(
+  questionText: string,
+  candidateAnswer: string,
+  questionCriteria: string[]
+): Promise<AgentEvaluationResponse> {
+
+  console.log('🤖 Starting agent evaluation...');
+
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Create ElevenLabs client
+      const client = new ElevenLabsClient({
+        apiKey: ELEVENLABS_API_KEY,
+      });
+
+      let agentResponse = '';
+      let conversationStarted = false;
+
+      // Create conversation with text-only mode
+      const conversation = new Conversation({
+        client,
+        agentId: AGENT_ID,
+        requiresAuth: true,
+        audioInterface: new SilentAudioInterface(),
+        config: {
+          overrides: {
+            agent: {
+              firstMessage: false, // Skip intro message
+            },
+            conversation: {
+              textOnly: true, // Enable text-only mode
+            },
+          },
+        },
+        callbackAgentResponse: (response: string) => {
+          console.log('📥 Agent response:', response);
+          // Skip the intro message, only capture evaluation responses
+          if (!response.includes('Thanks for taking the time') && !response.includes('Start Recording')) {
+            agentResponse += response + ' ';
+          }
+        },
+      });
+
+      // Build evaluation request message
+      const evaluationRequest = `
+I need you to evaluate this candidate's interview answer.
+
+QUESTION: "${questionText}"
+
+EVALUATION CRITERIA:
+${questionCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+
+CANDIDATE'S ANSWER: "${candidateAnswer}"
+
+Please evaluate if the answer adequately addresses ALL the criteria. Respond in this exact JSON format:
+{
+  "decision": "APPROVED" or "FOLLOW_UP",
+  "reasoning": "brief explanation of your evaluation",
+  "followUpText": "specific follow-up question if FOLLOW_UP decision, otherwise omit",
+  "score": 0-100
+}
+
+Return ONLY the JSON, no other text.
+`;
+
+      // Start the session
+      console.log('📤 Starting conversation session...');
+      conversation.startSession().catch(reject);
+
+      // Wait for session to be active
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      if (!conversation.isSessionActive()) {
+        throw new Error('Failed to start conversation session');
+      }
+
+      console.log('📤 Sending evaluation request...');
+
+      // Send the evaluation request
+      conversation.sendUserMessage(evaluationRequest);
+
+      // Wait for response (give agent time to respond)
+      setTimeout(() => {
+        conversation.endSession();
+
+        // Parse the agent's response
+        try {
+          // Remove markdown code blocks if present
+          let cleanedResponse = agentResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+          const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+
+          if (jsonMatch) {
+            const evaluation: AgentEvaluationResponse = JSON.parse(jsonMatch[0]);
+            console.log('✅ Agent evaluation parsed:', evaluation);
+
+            if (evaluation.decision === 'APPROVED' || evaluation.decision === 'FOLLOW_UP') {
+              resolve(evaluation);
+              return;
+            }
+          }
+
+          // Fallback if parsing failed
+          console.warn('⚠️ Could not parse agent response, using fallback');
+          resolve({
+            decision: 'APPROVED',
+            reasoning: 'Agent response could not be parsed: ' + agentResponse.substring(0, 100),
+            score: 70,
+          });
+
+        } catch (error) {
+          reject(error);
+        }
+      }, 5000); // Wait 5 seconds for agent response
+
+    } catch (error) {
+      console.error('❌ Agent evaluation error:', error);
+      reject(error);
+    }
+  });
+}

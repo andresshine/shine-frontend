@@ -1,0 +1,70 @@
+/**
+ * Mux Client Configuration
+ * Server-side only - uses Mux API credentials
+ */
+
+import Mux from "@mux/mux-node";
+
+if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
+  throw new Error(
+    "Missing Mux credentials. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in .env.local"
+  );
+}
+
+// Initialize Mux client
+export const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
+});
+
+/**
+ * Create a direct upload URL for video upload
+ * This allows the browser to upload directly to Mux
+ */
+export async function createDirectUpload(corsOrigin: string = "*") {
+  try {
+    const upload = await mux.video.uploads.create({
+      cors_origin: corsOrigin,
+      new_asset_settings: {
+        playback_policy: ["public"],
+        encoding_tier: "baseline", // Baseline tier preserves 1080p input resolution
+        // Note: mp4_support not needed - static renditions (low.mp4, medium.mp4, high.mp4)
+        // are automatically available for transcription
+      },
+    });
+
+    return {
+      uploadUrl: upload.url,
+      uploadId: upload.id,
+    };
+  } catch (error) {
+    console.error("Error creating direct upload:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get asset details by asset ID
+ */
+export async function getAsset(assetId: string) {
+  try {
+    const asset = await mux.video.assets.retrieve(assetId);
+    return asset;
+  } catch (error) {
+    console.error("Error fetching asset:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get upload details by upload ID
+ */
+export async function getUpload(uploadId: string) {
+  try {
+    const upload = await mux.video.uploads.retrieve(uploadId);
+    return upload;
+  } catch (error) {
+    console.error("Error fetching upload:", error);
+    throw error;
+  }
+}

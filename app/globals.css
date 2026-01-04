@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Custom Properties for dynamic brand customization */
+:root {
+  /* Brand customization variables - can be updated via JavaScript */
+  --brand-primary: #8f84c2;
+  --brand-primary-rgb: 143, 132, 194;
+  --brand-secondary: #fb7185;
+  --brand-secondary-rgb: 251, 113, 133;
+  --brand-tertiary: #d19648;
+  --brand-radius: 16px;
+  --brand-font-family: "Inter", sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border-light dark:border-border-dark;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background-light text-foreground-light dark:bg-background-dark dark:text-foreground-dark;
+    @apply font-sans antialiased;
+    @apply transition-colors duration-200;
+  }
+
+  /* Typography defaults */
+  h1 {
+    @apply text-2xl font-medium leading-tight;
+  }
+
+  h2 {
+    @apply text-xl font-medium leading-snug;
+  }
+
+  h3 {
+    @apply text-lg font-medium leading-normal;
+  }
+
+  p {
+    @apply font-normal leading-relaxed;
+  }
+
+  /* Responsive typography */
+  @media (max-width: 768px) {
+    h1 {
+      @apply text-xl;
+    }
+
+    h2 {
+      @apply text-lg;
+    }
+
+    h3 {
+      @apply text-base;
+    }
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    @apply text-muted-foreground-light dark:text-muted-foreground-dark;
+  }
+
+  /* Screen reader only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
+  }
+
+  /* Backdrop blur utilities */
+  .backdrop-blur-glass {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}

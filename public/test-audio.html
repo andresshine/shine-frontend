@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio Test</title>
+</head>
+<body>
+  <h1>Audio Recording Test</h1>
+  <button id="start">Start Recording</button>
+  <button id="stop" disabled>Stop Recording</button>
+  <br><br>
+  <video id="preview" autoplay muted width="640" height="480"></video>
+  <br>
+  <video id="playback" controls width="640" height="480"></video>
+  <br>
+  <div id="info"></div>
+
+  <script>
+    let mediaRecorder;
+    let chunks = [];
+    let stream;
+
+    document.getElementById('start').onclick = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 1280, height: 720 },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 44100
+          }
+        });
+
+        document.getElementById('preview').srcObject = stream;
+
+        const audioTracks = stream.getAudioTracks();
+        const videoTracks = stream.getVideoTracks();
+
+        document.getElementById('info').innerHTML = `
+          Audio tracks: ${audioTracks.length}<br>
+          Video tracks: ${videoTracks.length}<br>
+          Audio track enabled: ${audioTracks[0]?.enabled}<br>
+          Audio track muted: ${audioTracks[0]?.muted}<br>
+        `;
+
+        // Try different mime types
+        const mimeTypes = [
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm'
+        ];
+
+        let mimeType = 'video/webm';
+        for (const type of mimeTypes) {
+          if (MediaRecorder.isTypeSupported(type)) {
+            mimeType = type;
+            console.log('Using:', type);
+            break;
+          }
+        }
+
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType,
+          audioBitsPerSecond: 128000,
+          videoBitsPerSecond: 2500000
+        });
+
+        chunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          document.getElementById('playback').src = url;
+
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        document.getElementById('start').disabled = true;
+        document.getElementById('stop').disabled = false;
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    document.getElementById('stop').onclick = () => {
+      mediaRecorder.stop();
+      document.getElementById('start').disabled = false;
+      document.getElementById('stop').disabled = true;
+    };
+  </script>
+</body>
+</html>
