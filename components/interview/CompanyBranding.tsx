@@ -5,6 +5,7 @@
  * Displays company logo/initial, name, and brand customization button
  */
 
+import Image from "next/image";
 import { Palette } from "lucide-react";
 import { useInterview } from "@/lib/hooks/useInterview";
 import { useBrandCustomization } from "@/lib/hooks/useBrandCustomization";
@@ -41,10 +42,13 @@ export function CompanyBranding({ onBrandPanelToggle }: CompanyBrandingProps) {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-md flex items-center justify-center bg-gray-200 dark:bg-gray-700">
             {logoSrc ? (
-              <img
+              <Image
                 src={logoSrc}
                 alt={`${company_name} logo`}
+                width={40}
+                height={40}
                 className="w-full h-full object-contain p-1"
+                unoptimized
               />
             ) : (
               <span className="text-2xl font-bold text-gray-600 dark:text-white">

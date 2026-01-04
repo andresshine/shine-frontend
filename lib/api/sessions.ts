@@ -13,9 +13,9 @@ export async function getSessionData(
   sessionId: string
 ): Promise<InterviewSession | null> {
   try {
-    // Fetch session with campaign and company
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
+    // Fetch session with campaign and company - Type cast to bypass Supabase type inference
+    const { data: session, error: sessionError } = await (supabase
+      .from("sessions") as any)
       .select(
         `
         *,
@@ -43,9 +43,9 @@ export async function getSessionData(
       return null;
     }
 
-    // Fetch brand customization separately
-    const { data: brandCustomization, error: brandError } = await supabase
-      .from("brand_customizations")
+    // Fetch brand customization separately - Type cast to bypass Supabase type inference
+    const { data: brandCustomization, error: brandError } = await (supabase
+      .from("brand_customizations") as any)
       .select("*")
       .eq("company_id", session.company_id)
       .single();
@@ -111,8 +111,9 @@ export async function updateSessionProgress(
       }
     }
 
-    const { error } = await supabase
-      .from("sessions")
+    // Type cast to bypass Supabase type inference
+    const { error } = await (supabase
+      .from("sessions") as any)
       .update(updateData)
       .eq("session_id", sessionId);
 
@@ -138,9 +139,9 @@ export async function createRecording(
   muxAssetId?: string
 ): Promise<string | null> {
   try {
-    // First, get the session UUID from session_id
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
+    // First, get the session UUID from session_id - Type cast to bypass Supabase type inference
+    const { data: session, error: sessionError } = await (supabase
+      .from("sessions") as any)
       .select("id")
       .eq("session_id", sessionId)
       .single();
@@ -150,8 +151,9 @@ export async function createRecording(
       return null;
     }
 
-    const { data, error } = await supabase
-      .from("recordings")
+    // Type cast to bypass Supabase type inference
+    const { data, error } = await (supabase
+      .from("recordings") as any)
       .insert({
         session_id: session.id,
         question_id: questionId,
@@ -180,9 +182,9 @@ export async function createRecording(
  */
 export async function getSessionRecordings(sessionId: string) {
   try {
-    // Get session UUID
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
+    // Get session UUID - Type cast to bypass Supabase type inference
+    const { data: session, error: sessionError } = await (supabase
+      .from("sessions") as any)
       .select("id")
       .eq("session_id", sessionId)
       .single();
@@ -192,8 +194,9 @@ export async function getSessionRecordings(sessionId: string) {
       return [];
     }
 
-    const { data, error } = await supabase
-      .from("recordings")
+    // Type cast to bypass Supabase type inference
+    const { data, error } = await (supabase
+      .from("recordings") as any)
       .select("*")
       .eq("session_id", session.id)
       .order("question_index", { ascending: true });

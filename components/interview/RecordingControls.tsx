@@ -118,7 +118,7 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
       // Start speech recognition for evaluation
       answerEvaluation.startListening(
         currentQuestion.text,
-        currentQuestion.context || undefined
+        currentQuestion.intent || undefined
       );
 
       // Update interview state

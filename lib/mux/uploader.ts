@@ -69,7 +69,6 @@ export async function uploadVideoToMux(
         resolve({
           success: true,
           assetId: uploadId, // This is actually uploadId
-          uploadId: uploadId,
         });
       });
 

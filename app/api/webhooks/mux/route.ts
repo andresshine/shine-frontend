@@ -54,10 +54,9 @@ async function handleAssetReady(data: any) {
 
   console.log("Asset ready:", assetId, "Playback ID:", playbackId);
 
-  // Update recording in database
-  // @ts-ignore - Supabase type inference issue with update
-  const { data: recording, error } = await supabase
-    .from("recordings")
+  // Update recording in database - Type cast to bypass Supabase type inference
+  const { data: recording, error } = await (supabase
+    .from("recordings") as any)
     .update({
       video_status: "ready",
       mux_playback_id: playbackId,
@@ -146,9 +145,9 @@ async function handleAssetError(data: any) {
 
   console.log("Asset errored:", assetId);
 
-  // Update recording in database
-  const { error } = await supabase
-    .from("recordings")
+  // Update recording in database - Type cast to bypass Supabase type inference
+  const { error } = await (supabase
+    .from("recordings") as any)
     .update({
       video_status: "error",
       updated_at: new Date().toISOString(),

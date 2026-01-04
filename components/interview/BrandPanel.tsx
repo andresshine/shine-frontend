@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import Image from "next/image";
 import { X, Upload, ChevronDown } from "lucide-react";
 import { useBrandCustomization } from "@/lib/hooks/useBrandCustomization";
 import { useBrandButton } from "@/lib/utils/brandButton";
@@ -187,10 +188,13 @@ export function BrandPanel({ isOpen, onClose }: BrandPanelProps) {
               {brandmarkLight ? (
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-4">
-                    <img
+                    <Image
                       src={brandmarkLight}
                       alt="Light mode brandmark preview"
+                      width={64}
+                      height={64}
                       className="w-16 h-16 object-contain bg-gray-100 dark:bg-gray-900 rounded"
+                      unoptimized
                     />
                     <div className="flex-1">
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
@@ -234,10 +238,13 @@ export function BrandPanel({ isOpen, onClose }: BrandPanelProps) {
               {brandmarkDark ? (
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-4">
-                    <img
+                    <Image
                       src={brandmarkDark}
                       alt="Dark mode brandmark preview"
+                      width={64}
+                      height={64}
                       className="w-16 h-16 object-contain bg-gray-100 dark:bg-gray-900 rounded"
+                      unoptimized
                     />
                     <div className="flex-1">
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">

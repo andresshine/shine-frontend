@@ -27,7 +27,7 @@ export function useAnswerEvaluation(): UseAnswerEvaluationResult {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any | null>(null); // Web Speech API type not available in build environment
   const evaluationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentQuestionRef = useRef<string>('');
   const currentContextRef = useRef<string>('');
@@ -91,7 +91,7 @@ export function useAnswerEvaluation(): UseAnswerEvaluationResult {
     lastEvaluatedTranscriptRef.current = '';
 
     // Check for Web Speech API support
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       console.error('Web Speech API not supported in this browser');
@@ -113,7 +113,7 @@ export function useAnswerEvaluation(): UseAnswerEvaluationResult {
       setIsListening(true);
     };
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: any) => { // Web Speech API type not available in build environment
       let interimTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -129,7 +129,7 @@ export function useAnswerEvaluation(): UseAnswerEvaluationResult {
       setTranscript(fullTranscript);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => { // Web Speech API type not available in build environment
       console.error('Speech recognition error:', event.error);
       // Don't stop on no-speech errors, just log
       if (event.error !== 'no-speech') {
@@ -212,10 +212,4 @@ export function useAnswerEvaluation(): UseAnswerEvaluationResult {
   };
 }
 
-// Add type declarations for Web Speech API
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
+// Web Speech API types handled with 'any' above - no global declarations needed
