@@ -37,7 +37,7 @@ export function CompanyBranding({ onBrandPanelToggle }: CompanyBrandingProps) {
   const logoSrc = getBrandmarkSrc();
 
   return (
-    <div className="p-5 border-b border-border-light dark:border-gold/10">
+    <div className="px-4 md:px-6 py-4 border-b border-border-light dark:border-gold/10">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-md flex items-center justify-center bg-gray-200 dark:bg-gray-700">
