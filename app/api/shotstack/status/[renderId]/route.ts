@@ -8,10 +8,10 @@ import { getRenderStatus } from '@/lib/services/shotstack';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { renderId: string } }
+  { params }: { params: Promise<{ renderId: string }> }
 ) {
   try {
-    const { renderId } = params;
+    const { renderId } = await params;
 
     if (!renderId) {
       return NextResponse.json(
