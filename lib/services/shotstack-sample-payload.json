@@ -1,0 +1,90 @@
+{
+  "timeline": {
+    "soundtrack": {
+      "src": "https://shotstack-assets.s3.amazonaws.com/music/unminus/ambisax.mp3",
+      "effect": "fadeInFadeOut",
+      "volume": 0.18
+    },
+    "tracks": [
+      {
+        "clips": [
+          {
+            "asset": {
+              "type": "image",
+              "src": "https://shotstack-assets.s3.amazonaws.com/backgrounds/gradient-blue.jpg"
+            },
+            "start": 0,
+            "length": 30,
+            "fit": "cover",
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "clips": [
+          {
+            "asset": {
+              "type": "video",
+              "src": "https://example.com/user-recording.mp4",
+              "volume": 1.0
+            },
+            "start": 0,
+            "length": 30,
+            "fit": "crop",
+            "scale": 1.0,
+            "position": "center",
+            "filter": "greyscale"
+          }
+        ]
+      },
+      {
+        "clips": [
+          {
+            "asset": {
+              "type": "html",
+              "html": "<!DOCTYPE html><html><head><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');body{margin:0;padding:0;width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;overflow:hidden;}.quote-container{max-width:1200px;padding:60px;text-align:center;}.quote-icon{font-size:80px;color:#D4AF37;opacity:0.3;margin-bottom:20px;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.3));}.quote-text{font-size:48px;font-weight:600;color:#D4AF37;line-height:1.4;text-shadow:0 2px 8px rgba(0,0,0,0.4);animation:fadeInUp 1s ease-out;}@keyframes fadeInUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}</style></head><body><div class=\"quote-container\"><div class=\"quote-icon\">💡</div><div class=\"quote-text\">What's your role and team size?</div></div></body></html>",
+              "width": 1920,
+              "height": 1080
+            },
+            "start": 2,
+            "length": 26,
+            "transition": {
+              "in": "fade",
+              "out": "fade"
+            },
+            "opacity": 0.95
+          }
+        ]
+      }
+    ]
+  },
+  "output": {
+    "format": "mp4",
+    "resolution": "hd",
+    "aspectRatio": "16:9",
+    "fps": 30,
+    "scaleTo": "preview",
+    "quality": "medium",
+    "destinations": [
+      {
+        "provider": "mux",
+        "options": {
+          "accessToken": "{{MUX_ACCESS_TOKEN}}",
+          "secretKey": "{{MUX_SECRET_KEY}}",
+          "playbackPolicy": ["public"],
+          "mp4Support": "standard"
+        }
+      }
+    ]
+  },
+  "merge": [
+    {
+      "find": "MUX_ACCESS_TOKEN",
+      "replace": "YOUR_MUX_TOKEN_HERE"
+    },
+    {
+      "find": "MUX_SECRET_KEY",
+      "replace": "YOUR_MUX_SECRET_HERE"
+    }
+  ]
+}

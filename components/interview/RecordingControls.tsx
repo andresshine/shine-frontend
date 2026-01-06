@@ -166,53 +166,6 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Real-time Feedback Area */}
-      {isRecording && (
-        <div className="px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-          {/* Status indicator */}
-          <div className="flex items-center gap-2 mb-2">
-            {answerEvaluation.isEvaluating ? (
-              <>
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">Analyzing...</span>
-              </>
-            ) : answerEvaluation.isListening ? (
-              <>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">Listening...</span>
-              </>
-            ) : null}
-          </div>
-
-          {/* Feedback message */}
-          {answerEvaluation.evaluation?.isComplete ? (
-            <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              Great answer! You can stop recording when ready.
-            </p>
-          ) : answerEvaluation.evaluation?.followUp ? (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              💡 {answerEvaluation.evaluation.followUp}
-            </p>
-          ) : answerEvaluation.transcript.length > 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Keep going...
-            </p>
-          ) : (
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Start speaking to answer the question
-            </p>
-          )}
-
-          {/* Transcript preview (optional, can be hidden) */}
-          {answerEvaluation.transcript && (
-            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 line-clamp-2 italic">
-              &quot;{answerEvaluation.transcript.slice(-150)}...&quot;
-            </p>
-          )}
-        </div>
-      )}
-
       {/* Controls Row */}
       <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-center">
         {/* Device Controls */}

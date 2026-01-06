@@ -55,42 +55,86 @@ export function useVideoRecorder(): UseVideoRecorderResult {
     audioDeviceId?: string,
     videoDeviceId?: string
   ) => {
+    let stream: MediaStream | null = null; // Initialize stream to null
+
     try {
-      // Simple, reliable constraints that work on all cameras
-      const constraints: MediaStreamConstraints = {
+      const audioConstraints = audioDeviceId
+        ? {
+            deviceId: { exact: audioDeviceId },
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 44100,
+          }
+        : {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 44100,
+          };
+
+      // Attempt 1: Try 1080p exact resolution
+      const constraints1080p: MediaStreamConstraints = {
         video: videoDeviceId
           ? {
               deviceId: { exact: videoDeviceId },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
+              width: { exact: 1920 }, // Force 1080p width
+              height: { exact: 1080 }, // Force 1080p height
+              aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
             }
           : {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
+              width: { exact: 1920 }, // Force 1080p width
+              height: { exact: 1080 }, // Force 1080p height
+              aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
               facingMode: "user",
             },
-        audio: audioDeviceId
-          ? {
-              deviceId: { exact: audioDeviceId },
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 44100,
-            }
-          : {
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 44100,
-            },
+        audio: audioConstraints,
       };
 
-      // Request media stream
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints1080p);
+        console.log("📹 Successfully obtained 1080p exact stream for recording.");
+      } catch (error) {
+        if (error instanceof OverconstrainedError) {
+          console.warn("📹 Failed to get 1080p exact stream, attempting 720p exact as fallback:", error);
+          // Attempt 2: Fallback to 720p exact resolution
+          const constraints720p: MediaStreamConstraints = {
+            video: videoDeviceId
+              ? {
+                  deviceId: { exact: videoDeviceId },
+                  width: { exact: 1280 }, // Force 720p width
+                  height: { exact: 720 }, // Force 720p height
+                  aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+                }
+              : {
+                  width: { exact: 1280 }, // Force 720p width
+                  height: { exact: 720 }, // Force 720p height
+                  aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+                  facingMode: "user",
+                },
+            audio: audioConstraints,
+          };
+          stream = await navigator.mediaDevices.getUserMedia(constraints720p);
+          console.log("📹 Successfully obtained 720p exact stream for recording as fallback.");
+        } else {
+          // Not an OverconstrainedError, re-throw to be caught by the outer catch
+          throw error;
+        }
+      }
+
+      // If we reached here, a stream was successfully obtained (either 1080p or 720p)
       streamRef.current = stream;
 
-      // Log stream info
       const videoTrack = stream.getVideoTracks()[0];
       const videoSettings = videoTrack.getSettings();
+      const videoAppliedConstraints = videoTrack.getConstraints();
+
+      // Task 3: Disable Chrome's Internal Downscaling
+      if (videoTrack.contentHint !== undefined) {
+        videoTrack.contentHint = 'detail';
+        console.log('📹 Video contentHint set to "detail".');
+      }
+
       console.log(`📹 Camera: ${videoTrack.label} - ${videoSettings.width}x${videoSettings.height}`);
+      console.log('📹 Camera Applied Constraints:', videoAppliedConstraints);
 
 
       // Determine best supported mime type
@@ -110,11 +154,11 @@ export function useVideoRecorder(): UseVideoRecorderResult {
         }
       }
 
-      // Create MediaRecorder with safe bitrate for 720p
+      // Create MediaRecorder with bitrate suitable for 1080p (even if fallback to 720p, this bitrate is fine)
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000,
-        videoBitsPerSecond: 2500000, // 2.5 Mbps - safe for 720p
+        videoBitsPerSecond: 8000000, // 8 Mbps - suitable for 1080p
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -151,8 +195,13 @@ export function useVideoRecorder(): UseVideoRecorderResult {
       console.error("Error starting recording:", error);
       setState((prev) => ({
         ...prev,
-        error: "Failed to access camera/microphone. Please check permissions.",
+        error: "Failed to access camera/microphone. Please check permissions. " + (error as Error).message,
       }));
+      // Stop all tracks if an error occurred after stream was obtained but before setState
+      if (stream) { // Use the local 'stream' variable here
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      streamRef.current = null; // Ensure streamRef is cleared on error
     }
   }, []);
 

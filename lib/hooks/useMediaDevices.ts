@@ -35,7 +35,12 @@ export function useMediaDevices(): UseMediaDevicesResult {
   const enumerateDevices = useCallback(async () => {
     try {
       // Request permissions first to get device labels
-      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+
+      // IMPORTANT: Immediately stop all tracks to release the camera
+      // This allows Chrome to enumerate ALL available cameras, not just the one in use
+      permissionStream.getTracks().forEach(track => track.stop());
+
       setHasPermissions(true);
 
       const devices = await navigator.mediaDevices.enumerateDevices();
