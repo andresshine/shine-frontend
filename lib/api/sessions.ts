@@ -1,10 +1,17 @@
 /**
  * Session API Functions
  * Functions for fetching and managing interview sessions
+ * NOTE: Uses service role key to bypass RLS for server-side operations
  */
 
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import { InterviewSession, Question } from "@/lib/types/interview";
+
+// Use service role key for server-side operations (bypasses RLS)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
  * Fetch a session by session_id with all related data
