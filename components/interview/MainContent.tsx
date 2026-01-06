@@ -30,8 +30,13 @@ export function MainContent() {
   // Initialize camera on mount and when devices change
   useEffect(() => {
     async function initCamera() {
-      // Skip if currently recording (recording stream handles camera)
+      // When recording starts, STOP the preview stream to prevent echo
       if (videoRecorder.state.isRecording) {
+        if (streamRef.current) {
+          console.log('🎤 Stopping preview stream to prevent echo during recording');
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
         return;
       }
 

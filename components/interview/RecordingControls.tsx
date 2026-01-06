@@ -72,6 +72,9 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
         // Use the real-time evaluation confidence, or default
         const confidence = answerEvaluation.evaluation?.confidence || 75;
 
+        // Clear preview IMMEDIATELY so FaceGuide shows for next question
+        videoRecorder.clearPreview();
+
         // Immediately advance to next question (non-blocking)
         approveAnswer(confidence);
 
@@ -91,11 +94,6 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
           if (recordingId) {
             pollMuxUploadBackground(uploadId, recordingId);
           }
-
-          // Clear preview after a delay
-          setTimeout(() => {
-            videoRecorder.clearPreview();
-          }, 1000);
         }
       }
 

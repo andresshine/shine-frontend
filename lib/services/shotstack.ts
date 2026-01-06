@@ -41,77 +41,52 @@ const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
 const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
 
 /**
- * Generate HTML asset for floating quote text
+ * Generate simple HTML asset for quote text overlay
+ * Uses inline styles compatible with Shotstack's HTML renderer
+ * Note: Shotstack doesn't support @import or external fonts
  */
 function generateFloatingQuoteHTML(quoteText: string, theme: ThemeConfig): string {
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=${theme.fontFamily.replace(' ', '+')}:wght@400;600;700&display=swap');
-
-    body {
-      margin: 0;
-      padding: 0;
-      width: 1920px;
-      height: 1080px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: '${theme.fontFamily}', sans-serif;
-      overflow: hidden;
-    }
-
-    .quote-container {
-      max-width: 1200px;
-      padding: 60px;
-      text-align: center;
-    }
-
-    .quote-icon {
-      font-size: 80px;
-      color: ${theme.primaryColor};
-      opacity: 0.3;
-      margin-bottom: 20px;
-      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
-    }
-
-    .quote-text {
-      font-size: 48px;
-      font-weight: 600;
-      color: ${theme.primaryColor};
-      line-height: 1.4;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-      animation: fadeInUp 1s ease-out;
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1920px;
+  height: 1080px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-family: Montserrat, Arial, Helvetica, sans-serif;
+}
+.quote {
+  padding: 40px 60px;
+  margin-bottom: 60px;
+  text-align: center;
+  max-width: 1400px;
+}
+.text {
+  font-size: 52px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.4;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.4);
+}
+</style>
 </head>
 <body>
-  <div class="quote-container">
-    <div class="quote-icon">💡</div>
-    <div class="quote-text">${quoteText}</div>
-  </div>
+<div class="quote"><div class="text">${quoteText}</div></div>
 </body>
-</html>
-  `.trim();
+</html>`;
 }
 
 /**
  * Build Shotstack JSON template for video composition
  */
 function buildShotstackTemplate(params: ProduceTestimonialParams) {
+  console.log("!!! DEPLOYMENT CHECK - FULL CANVAS CSS STRATEGY ACTIVE !!!");
+  console.log("!!! FULL CANVAS TIMESTAMP:", new Date().toISOString(), "!!!");
+
   const { videoUrl, quoteText, theme, musicUrl, duration = 30 } = params;
 
   // Determine background asset based on theme
@@ -139,22 +114,30 @@ function buildShotstackTemplate(params: ProduceTestimonialParams) {
         volume: 0.18, // -15dB equivalent
       } : undefined,
 
-      // ========== VIDEO TRACKS (Stacked from bottom to top) ==========
+      // ========== VIDEO TRACKS (Track 0 = Top Layer, Track 1 = Bottom Layer) ==========
       tracks: [
-        // TRACK 1 (Bottom): Background Layer
+        // TRACK 0 (TOP): Text Overlay
         {
           clips: [
             {
-              asset: backgroundAsset,
+              asset: {
+                type: 'html',
+                html: `<p>${quoteText}</p>`,
+                css: 'p { margin: 0; font-size: 36px; color: white; text-align: center; font-weight: bold; }',
+                width: 1200,
+                height: 120,
+                background: 'transparent',
+              },
               start: 0,
               length: duration,
-              fit: 'cover',
-              scale: 1.0,
+              position: 'bottom',
+              offset: {
+                y: 0.05,
+              },
             },
           ],
         },
-
-        // TRACK 2 (Middle): User Video with AI Background Removal
+        // TRACK 1 (BOTTOM): User Video
         {
           clips: [
             {
@@ -165,40 +148,6 @@ function buildShotstackTemplate(params: ProduceTestimonialParams) {
               },
               start: 0,
               length: duration,
-              fit: 'crop',
-              scale: 1.0,
-              position: 'center',
-
-              // AI Background Removal (Green Screen effect)
-              filter: 'greyscale', // Placeholder - Shotstack AI segmentation requires enterprise plan
-
-              // Note: For full AI background removal, use:
-              // filter: 'chroma',
-              // filterOptions: {
-              //   type: 'ai-segmentation',
-              //   threshold: 0.1,
-              // }
-            },
-          ],
-        },
-
-        // TRACK 3 (Top): Floating Quote Text
-        {
-          clips: [
-            {
-              asset: {
-                type: 'html',
-                html: generateFloatingQuoteHTML(quoteText, theme),
-                width: 1920,
-                height: 1080,
-              },
-              start: 2, // Delay 2 seconds for dramatic effect
-              length: duration - 4, // End 2 seconds before video ends
-              transition: {
-                in: 'fade',
-                out: 'fade',
-              },
-              opacity: 0.95,
             },
           ],
         },
@@ -211,11 +160,17 @@ function buildShotstackTemplate(params: ProduceTestimonialParams) {
       resolution: 'hd',
       aspectRatio: '16:9',
       fps: 30,
-      scaleTo: 'preview', // Use 'hd' for production
-      quality: 'medium', // Use 'high' for production
-
-      // Note: Shotstack doesn't support Mux as a direct destination
-      // We'll download the video and upload to Mux separately
+      scaleTo: 'hd',
+      quality: 'high',
+      // Mux destination - automatically uploads rendered video to Mux
+      destinations: [
+        {
+          provider: 'mux',
+          options: {
+            playbackPolicy: ['public'],
+          },
+        },
+      ],
     },
   };
 }
@@ -231,10 +186,16 @@ export async function produceTestimonial(
       throw new Error('SHOTSTACK_API_KEY is not configured');
     }
 
+    // Debug: Verify quoteText is populated
+    console.log('🔍 DEBUG - Quote text value:', params.quoteText);
+    console.log('🔍 DEBUG - Quote text type:', typeof params.quoteText);
+    console.log('🔍 DEBUG - Quote text length:', params.quoteText?.length);
+
     const template = buildShotstackTemplate(params);
 
+    console.log('🚀 SENDING CANARY PAYLOAD AT', new Date().toISOString());
     console.log('📹 Submitting Shotstack render job...');
-    console.log('Template:', JSON.stringify(template, null, 2));
+    console.log('🐤 CANARY TEMPLATE:', JSON.stringify(template, null, 2));
 
     const response = await fetch(`${SHOTSTACK_API_URL}/render`, {
       method: 'POST',
@@ -268,10 +229,23 @@ export async function produceTestimonial(
   }
 }
 
+export interface RenderStatusResponse {
+  id: string;
+  status: 'queued' | 'fetching' | 'rendering' | 'saving' | 'done' | 'failed';
+  progress?: number;
+  url?: string;
+  error?: string;
+  mux?: {
+    assetId: string;
+    playbackId: string;
+  };
+}
+
 /**
  * Check render job status
+ * Returns status, progress, output URL, and Mux asset info when complete
  */
-export async function getRenderStatus(renderId: string) {
+export async function getRenderStatus(renderId: string): Promise<RenderStatusResponse> {
   try {
     if (!SHOTSTACK_API_KEY) {
       throw new Error('SHOTSTACK_API_KEY is not configured');
@@ -288,7 +262,24 @@ export async function getRenderStatus(renderId: string) {
     }
 
     const data = await response.json();
-    return data.response;
+    const renderResponse = data.response;
+
+    // Extract Mux destination info if available
+    const muxDestination = renderResponse.data?.output?.destinations?.find(
+      (d: any) => d.provider === 'mux'
+    );
+
+    return {
+      id: renderResponse.id,
+      status: renderResponse.status,
+      progress: renderResponse.progress,
+      url: renderResponse.url,
+      error: renderResponse.error,
+      mux: muxDestination?.meta ? {
+        assetId: muxDestination.meta.assetId,
+        playbackId: muxDestination.meta.playbackId,
+      } : undefined,
+    };
   } catch (error) {
     console.error('Error fetching render status:', error);
     throw error;
@@ -334,29 +325,45 @@ export async function uploadToMux(videoUrl: string): Promise<{ assetId: string; 
 // ==================== SAMPLE USAGE ====================
 
 /*
-Example usage:
+Example 1: Manual production with custom params
 
-import { produceTestimonial } from '@/lib/services/shotstack';
+import { produceTestimonial, getRenderStatus } from '@/lib/services/shotstack';
 
 const result = await produceTestimonial({
-  videoUrl: 'https://example.com/user-video.mp4',
-  quoteText: "What's your role and team size?",
+  videoUrl: 'https://stream.mux.com/{playbackId}/high.mp4',
+  quoteText: '"This product is absolutely..."',
   theme: {
-    primaryColor: '#D4AF37',
-    secondaryColor: '#C9A961',
-    tertiaryColor: '#B8994A',
-    fontFamily: 'Inter',
-    backgroundType: 'image',
-    backgroundImageUrl: 'https://example.com/background.jpg',
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#E5E5E5',
+    tertiaryColor: '#CCCCCC',
+    fontFamily: 'Montserrat',
+    backgroundType: 'color',
+    backgroundColor: '#1a1a2e',
   },
-  musicUrl: 'https://example.com/background-music.mp3',
+  musicUrl: 'https://cdn.example.com/brand-music.mp3',
   duration: 30,
 });
 
 console.log('Render ID:', result.response?.id);
 
-// Poll for status
+// Poll for status - video is automatically uploaded to Mux when done
 const status = await getRenderStatus(result.response.id);
 console.log('Status:', status.status);
-console.log('Mux Asset ID:', status.destinations?.mux?.assetId);
+if (status.mux) {
+  console.log('Mux Asset ID:', status.mux.assetId);
+  console.log('Mux Playback ID:', status.mux.playbackId);
+}
+
+---
+
+Example 2: Automated production via AutomationService
+
+import { processReadyVideo } from '@/lib/services/automation';
+
+// Triggered when video_status = 'ready' and transcription_status = 'completed'
+const result = await processReadyVideo(recordingId);
+
+if (result.success) {
+  console.log('Render started:', result.renderId);
+}
 */

@@ -5,7 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+
+// Use service role key for webhook operations (bypasses RLS)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,49 +96,38 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
   try {
     // Import transcription function
     const { transcribeFromUrl } = await import("@/lib/deepgram/client");
-    const { createClient } = await import("@supabase/supabase-js");
-
-    const supabaseService = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     // Update status to processing
-    await supabaseService
+    await supabase
       .from("recordings")
-      .update({ transcript_status: "processing" })
+      .update({ transcription_status: "processing" })
       .eq("id", recordingId);
 
     // Get audio from Mux
     const audioUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
+    console.log("🎤 Transcribing audio from:", audioUrl);
 
     // Transcribe
     const { transcript } = await transcribeFromUrl(audioUrl);
 
     // Save transcript
-    await supabaseService
+    await supabase
       .from("recordings")
       .update({
-        transcript,
-        transcript_status: "completed",
+        transcription: transcript,
+        transcription_status: "completed",
         updated_at: new Date().toISOString(),
       })
       .eq("id", recordingId);
 
-    console.log("Transcription completed for recording:", recordingId);
+    console.log("✅ Transcription completed for recording:", recordingId);
   } catch (error) {
-    console.error("Transcription failed:", error);
+    console.error("❌ Transcription failed:", error);
 
     // Update status to failed
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseService = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    await supabaseService
+    await supabase
       .from("recordings")
-      .update({ transcript_status: "failed" })
+      .update({ transcription_status: "failed" })
       .eq("id", recordingId);
   }
 }

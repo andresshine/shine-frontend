@@ -28,8 +28,7 @@ export async function createDirectUpload(corsOrigin: string = "*") {
       new_asset_settings: {
         playback_policy: ["public"],
         encoding_tier: "baseline", // Baseline tier preserves 1080p input resolution
-        // Note: mp4_support not needed - static renditions (low.mp4, medium.mp4, high.mp4)
-        // are automatically available for transcription
+        mp4_support: "standard", // Enable static renditions (low.mp4, medium.mp4, audio.m4a) for transcription & Shotstack
       },
     });
 

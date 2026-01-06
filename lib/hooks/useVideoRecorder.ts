@@ -56,6 +56,7 @@ export function useVideoRecorder(): UseVideoRecorderResult {
     videoDeviceId?: string
   ) => {
     let stream: MediaStream | null = null; // Initialize stream to null
+    let obtainedResolution: '1080p' | '720p' = '1080p'; // Track actual resolution obtained
 
     try {
       const audioConstraints = audioDeviceId
@@ -113,6 +114,7 @@ export function useVideoRecorder(): UseVideoRecorderResult {
             audio: audioConstraints,
           };
           stream = await navigator.mediaDevices.getUserMedia(constraints720p);
+          obtainedResolution = '720p';
           console.log("📹 Successfully obtained 720p exact stream for recording as fallback.");
         } else {
           // Not an OverconstrainedError, re-throw to be caught by the outer catch
@@ -154,11 +156,14 @@ export function useVideoRecorder(): UseVideoRecorderResult {
         }
       }
 
-      // Create MediaRecorder with bitrate suitable for 1080p (even if fallback to 720p, this bitrate is fine)
+      // Shine Premium Bitrate Strategy: Dynamic bitrate based on resolution
+      const videoBitsPerSecond = obtainedResolution === '1080p' ? 8_000_000 : 6_000_000;
+      console.log(`🎬 Shine Premium: Using ${videoBitsPerSecond / 1_000_000} Mbps for ${obtainedResolution}`);
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000,
-        videoBitsPerSecond: 8000000, // 8 Mbps - suitable for 1080p
+        videoBitsPerSecond,
       });
 
       mediaRecorderRef.current = mediaRecorder;
