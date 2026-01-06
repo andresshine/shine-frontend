@@ -178,7 +178,7 @@ export function MainContent() {
           <ul className="list-disc list-inside text-sm mt-2">
             <li>Switching to a different camera if available (use the camera icon below).</li>
             <li>Using a different web browser (e.g., Safari often provides higher resolutions on macOS).</li>
-            <li>Checking your operating system's camera privacy or settings.</li>
+            <li>Checking your operating system&apos;s camera privacy or settings.</li>
           </ul>
           <button
             onClick={() => setShowResolutionGuidance(false)}
