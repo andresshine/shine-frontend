@@ -1,17 +1,28 @@
 /**
  * Session API Functions
  * Functions for fetching and managing interview sessions
- * NOTE: Uses service role key to bypass RLS for server-side operations
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { InterviewSession, Question } from "@/lib/types/interview";
 
-// Use service role key for server-side operations (bypasses RLS)
-const supabase = createClient(
+// Anon client for client-side reads (subject to RLS)
+const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Service role client for server-side writes (bypasses RLS)
+// Only created when needed (lazy initialization for server-side only)
+function getServiceRoleClient() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for this operation");
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 /**
  * Fetch a session by session_id with all related data
@@ -21,7 +32,7 @@ export async function getSessionData(
 ): Promise<InterviewSession | null> {
   try {
     // Fetch session with campaign and company - Type cast to bypass Supabase type inference
-    const { data: session, error: sessionError } = await (supabase
+    const { data: session, error: sessionError } = await (supabaseAnon
       .from("sessions") as any)
       .select(
         `
@@ -51,7 +62,7 @@ export async function getSessionData(
     }
 
     // Fetch brand customization separately - Type cast to bypass Supabase type inference
-    const { data: brandCustomization, error: brandError } = await (supabase
+    const { data: brandCustomization, error: brandError } = await (supabaseAnon
       .from("brand_customizations") as any)
       .select("*")
       .eq("company_id", session.company_id)
@@ -118,7 +129,8 @@ export async function updateSessionProgress(
       }
     }
 
-    // Type cast to bypass Supabase type inference
+    // Type cast to bypass Supabase type inference - use service role for writes
+    const supabase = getServiceRoleClient();
     const { error } = await (supabase
       .from("sessions") as any)
       .update(updateData)
@@ -146,6 +158,9 @@ export async function createRecording(
   muxAssetId?: string
 ): Promise<string | null> {
   try {
+    // Use service role for server-side writes
+    const supabase = getServiceRoleClient();
+
     // First, get the session UUID from session_id - Type cast to bypass Supabase type inference
     const { data: session, error: sessionError } = await (supabase
       .from("sessions") as any)
@@ -189,6 +204,9 @@ export async function createRecording(
  */
 export async function getSessionRecordings(sessionId: string) {
   try {
+    // Use service role for server-side operations
+    const supabase = getServiceRoleClient();
+
     // Get session UUID - Type cast to bypass Supabase type inference
     const { data: session, error: sessionError } = await (supabase
       .from("sessions") as any)
