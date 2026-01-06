@@ -31,7 +31,7 @@ export async function GET(
       progress: status.progress || 0,
       url: status.url,
       error: status.error,
-      muxAssetId: status.destinations?.mux?.assetId,
+      muxAssetId: status.mux?.assetId,
     });
 
   } catch (error) {
