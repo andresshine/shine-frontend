@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUpload, getAsset } from "@/lib/mux/client";
 import { createClient } from "@supabase/supabase-js";
 import { transcribeFromUrl } from "@/lib/deepgram/client";
+import { waitUntil } from "@vercel/functions";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,24 +48,21 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", recordingId);
 
-        // Trigger transcription and AWAIT it (serverless functions terminate on response)
-        let transcriptionError: string | null = null;
+        // Trigger transcription in background using waitUntil (doesn't block response)
         if (playbackId) {
-          console.log("🎬 Triggering transcription before responding...");
-          try {
-            await triggerTranscription(recordingId, playbackId);
-          } catch (err) {
-            console.error("❌ Transcription failed:", err);
-            transcriptionError = err instanceof Error ? err.message : String(err);
-            // Continue anyway - video is still ready
-          }
+          console.log("🎬 Triggering transcription in background...");
+          const transcriptionPromise = triggerTranscription(recordingId, playbackId)
+            .catch(err => console.error("❌ Background transcription failed:", err));
+
+          // waitUntil keeps the function alive after response is sent
+          waitUntil(transcriptionPromise);
         }
 
+        // Return immediately - transcription continues in background
         return NextResponse.json({
           status: "ready",
           assetId: asset.id,
           playbackId,
-          transcriptionError, // Include error for debugging
         });
       } else if (asset.status === "preparing") {
         return NextResponse.json({ status: "processing" });
@@ -92,7 +90,7 @@ export async function POST(request: NextRequest) {
 /**
  * Wait for a URL to become available (returns 200 OK)
  */
-async function waitForUrl(url: string, maxAttempts: number = 10, interval: number = 3000): Promise<boolean> {
+async function waitForUrl(url: string, maxAttempts: number = 15, interval: number = 1000): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const response = await fetch(url, { method: 'HEAD' });
@@ -123,11 +121,11 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
   // Wait for primary URL (audio.m4a)
   let urlToUse: string | null = null;
 
-  if (await waitForUrl(primaryUrl, 10, 3000)) {
+  if (await waitForUrl(primaryUrl, 30, 1000)) {  // 30 attempts, 1s apart = 30s max
     urlToUse = primaryUrl;
   } else {
     console.log("⚠️ audio.m4a not available after retries, trying low.mp4...");
-    if (await waitForUrl(fallbackUrl, 5, 3000)) {
+    if (await waitForUrl(fallbackUrl, 15, 1000)) {  // 15 attempts, 1s apart = 15s max
       urlToUse = fallbackUrl;
     }
   }
