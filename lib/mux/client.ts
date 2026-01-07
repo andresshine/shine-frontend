@@ -34,8 +34,7 @@ export async function createDirectUpload(corsOrigin: string = "*") {
       cors_origin: corsOrigin,
       new_asset_settings: {
         playback_policy: ["public"],
-        encoding_tier: "baseline", // Baseline tier preserves 1080p input resolution
-        mp4_support: "standard", // Enable static renditions (low.mp4, medium.mp4, audio.m4a) for transcription & Shotstack
+        mp4_support: "capped-1080p", // Enable MP4 static renditions for transcription & Shotstack
       },
     });
 
