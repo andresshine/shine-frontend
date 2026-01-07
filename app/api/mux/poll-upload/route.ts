@@ -47,12 +47,15 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", recordingId);
 
-        // Trigger transcription immediately (video.asset.ready means audio is available)
+        // Trigger transcription and AWAIT it (serverless functions terminate on response)
         if (playbackId) {
-          // Don't await - let it run in background
-          triggerTranscription(recordingId, playbackId).catch((err) => {
-            console.error("❌ Background transcription failed:", err);
-          });
+          console.log("🎬 Triggering transcription before responding...");
+          try {
+            await triggerTranscription(recordingId, playbackId);
+          } catch (err) {
+            console.error("❌ Transcription failed:", err);
+            // Continue anyway - video is still ready
+          }
         }
 
         return NextResponse.json({

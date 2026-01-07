@@ -82,12 +82,11 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
         const uploadId = await videoRecorder.uploadRecording(blob);
 
         if (uploadId) {
-          // Save recording to database
+          // Save recording to database (don't pass uploadId as mux_asset_id - poll-upload will set real asset ID)
           const recordingId = await createRecordingEntry(
             session.session_id,
             currentQuestion.id,
-            currentQuestionIndex,
-            uploadId
+            currentQuestionIndex
           );
 
           // Poll Mux for processing in background (no UI blocking)
