@@ -21,8 +21,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error in Mux upload API:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to create upload URL" },
+      { error: `Failed to create upload URL: ${errorMessage}` },
       { status: 500 }
     );
   }

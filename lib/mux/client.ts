@@ -5,17 +5,30 @@
 
 import Mux from "@mux/mux-node";
 
-if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
-  throw new Error(
-    "Missing Mux credentials. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in .env.local"
-  );
+// Lazy initialization to avoid throwing at module load time
+let muxClient: Mux | null = null;
+
+function getMuxClient(): Mux {
+  if (!muxClient) {
+    if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
+      throw new Error(
+        "Missing Mux credentials. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET environment variables"
+      );
+    }
+    muxClient = new Mux({
+      tokenId: process.env.MUX_TOKEN_ID,
+      tokenSecret: process.env.MUX_TOKEN_SECRET,
+    });
+  }
+  return muxClient;
 }
 
-// Initialize Mux client
-export const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
-});
+// Export getter for backwards compatibility
+export const mux = {
+  get video() {
+    return getMuxClient().video;
+  },
+};
 
 /**
  * Create a direct upload URL for video upload
