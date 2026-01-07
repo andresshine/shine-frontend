@@ -31,7 +31,9 @@ export async function uploadVideoToMux(
     });
 
     if (!response.ok) {
-      throw new Error("Failed to get upload URL");
+      const errorData = await response.json().catch(() => ({ error: "Unknown server error" }));
+      console.error("Mux upload API error:", errorData);
+      throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
     const { uploadUrl, uploadId } = await response.json();
