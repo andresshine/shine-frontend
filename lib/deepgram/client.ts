@@ -3,56 +3,62 @@
  * Server-side only - uses Deepgram API key for transcription
  */
 
-import { createClient } from "@deepgram/sdk";
+import { createClient, DeepgramClient } from "@deepgram/sdk";
 
-if (!process.env.DEEPGRAM_API_KEY) {
-  throw new Error(
-    "Missing Deepgram API key. Please set DEEPGRAM_API_KEY in .env.local"
-  );
+// Lazy initialization to avoid throwing at module load time
+let deepgramClient: DeepgramClient | null = null;
+
+/**
+ * Get Deepgram client (lazy initialization)
+ */
+function getDeepgramClient(): DeepgramClient {
+  if (!deepgramClient) {
+    if (!process.env.DEEPGRAM_API_KEY) {
+      throw new Error(
+        "Missing Deepgram API key. Please set DEEPGRAM_API_KEY environment variable"
+      );
+    }
+    deepgramClient = createClient(process.env.DEEPGRAM_API_KEY);
+  }
+  return deepgramClient;
 }
-
-// Initialize Deepgram client
-export const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 
 /**
  * Transcribe audio from a URL
  */
 export async function transcribeFromUrl(audioUrl: string) {
+  console.log("🎤 Deepgram: Starting transcription from URL:", audioUrl);
+
   try {
+    const deepgram = getDeepgramClient();
+
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl(
-      {
-        url: audioUrl,
-      },
+      { url: audioUrl },
       {
         model: "nova-2",
         smart_format: true,
         punctuate: true,
         paragraphs: true,
         utterances: true,
-        diarize: false, // Set to true if you want speaker detection
+        diarize: false,
       }
     );
 
     if (error) {
-      console.error("Deepgram transcription error:", error);
+      console.error("❌ Deepgram transcription error:", error);
       throw error;
     }
 
-    // Extract the transcript
     const transcript =
       result?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
-
-    // Extract confidence score
     const confidence =
       result?.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0;
 
-    return {
-      transcript,
-      confidence,
-      fullResult: result,
-    };
+    console.log("✅ Deepgram: Transcription successful, length:", transcript.length, "chars");
+
+    return { transcript, confidence, fullResult: result };
   } catch (error) {
-    console.error("Error transcribing audio:", error);
+    console.error("❌ Deepgram: Error transcribing audio:", error);
     throw error;
   }
 }
@@ -64,7 +70,11 @@ export async function transcribeFromBuffer(
   audioBuffer: Buffer,
   mimeType: string = "audio/webm"
 ) {
+  console.log("🎤 Deepgram: Starting transcription from buffer");
+
   try {
+    const deepgram = getDeepgramClient();
+
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
       audioBuffer,
       {
@@ -78,7 +88,7 @@ export async function transcribeFromBuffer(
     );
 
     if (error) {
-      console.error("Deepgram transcription error:", error);
+      console.error("❌ Deepgram transcription error:", error);
       throw error;
     }
 
@@ -87,13 +97,11 @@ export async function transcribeFromBuffer(
     const confidence =
       result?.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0;
 
-    return {
-      transcript,
-      confidence,
-      fullResult: result,
-    };
+    console.log("✅ Deepgram: Transcription successful, length:", transcript.length, "chars");
+
+    return { transcript, confidence, fullResult: result };
   } catch (error) {
-    console.error("Error transcribing audio:", error);
+    console.error("❌ Deepgram: Error transcribing audio:", error);
     throw error;
   }
 }

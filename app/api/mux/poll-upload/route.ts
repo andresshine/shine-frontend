@@ -47,12 +47,12 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", recordingId);
 
-        // Trigger transcription after a delay (audio extraction takes time)
+        // Trigger transcription immediately (video.asset.ready means audio is available)
         if (playbackId) {
-          // Wait 30 seconds for Mux to finish audio extraction
-          setTimeout(async () => {
-            await triggerTranscription(recordingId, playbackId);
-          }, 30000);
+          // Don't await - let it run in background
+          triggerTranscription(recordingId, playbackId).catch((err) => {
+            console.error("❌ Background transcription failed:", err);
+          });
         }
 
         return NextResponse.json({
@@ -84,22 +84,27 @@ export async function POST(request: NextRequest) {
 }
 
 async function triggerTranscription(recordingId: string, playbackId: string) {
-  try {
-    console.log(`Starting transcription for recording ${recordingId}`);
+  const audioUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
 
-    await supabase
+  console.log("📝 Starting transcription for recording:", recordingId);
+  console.log("🔗 Using Audio URL:", audioUrl);
+
+  try {
+    // Update status to processing
+    const { error: updateError } = await supabase
       .from("recordings")
       .update({ transcription_status: "processing" })
       .eq("id", recordingId);
 
-    // Use Mux static rendition URL (MP4 file)
-    const videoUrl = `https://stream.mux.com/${playbackId}/low.mp4`;
-    console.log(`Transcribing from URL: ${videoUrl}`);
+    if (updateError) {
+      console.error("❌ Failed to update status to processing:", updateError);
+    }
 
-    // Transcribe directly from URL (Deepgram will fetch the file)
-    const { transcript } = await transcribeFromUrl(videoUrl);
+    // Transcribe audio
+    const { transcript } = await transcribeFromUrl(audioUrl);
 
-    await supabase
+    // Save transcript to database
+    const { error: saveError } = await supabase
       .from("recordings")
       .update({
         transcription: transcript,
@@ -108,12 +113,23 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
       })
       .eq("id", recordingId);
 
-    console.log("Transcription completed for recording:", recordingId);
+    if (saveError) {
+      console.error("❌ Failed to save transcript to database:", saveError);
+      throw saveError;
+    }
+
+    console.log("✅ Transcription completed for recording:", recordingId);
   } catch (error) {
-    console.error("Transcription failed:", error);
-    await supabase
+    console.error("❌ Transcription failed for recording:", recordingId, error);
+
+    // Update status to failed
+    const { error: failError } = await supabase
       .from("recordings")
       .update({ transcription_status: "failed" })
       .eq("id", recordingId);
+
+    if (failError) {
+      console.error("❌ Failed to update status to failed:", failError);
+    }
   }
 }

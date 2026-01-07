@@ -93,25 +93,30 @@ async function handleAssetReady(data: any) {
  * Trigger transcription for a recording
  */
 async function triggerTranscription(recordingId: string, playbackId: string) {
+  const audioUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
+
+  console.log("📝 Starting transcription for recording:", recordingId);
+  console.log("🔗 Using Audio URL:", audioUrl);
+
   try {
-    // Import transcription function
+    // Import transcription function (lazy load)
     const { transcribeFromUrl } = await import("@/lib/deepgram/client");
 
     // Update status to processing
-    await supabase
+    const { error: updateError } = await supabase
       .from("recordings")
       .update({ transcription_status: "processing" })
       .eq("id", recordingId);
 
-    // Get audio from Mux
-    const audioUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
-    console.log("🎤 Transcribing audio from:", audioUrl);
+    if (updateError) {
+      console.error("❌ Failed to update status to processing:", updateError);
+    }
 
-    // Transcribe
+    // Transcribe audio
     const { transcript } = await transcribeFromUrl(audioUrl);
 
-    // Save transcript
-    await supabase
+    // Save transcript to database
+    const { error: saveError } = await supabase
       .from("recordings")
       .update({
         transcription: transcript,
@@ -120,15 +125,24 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
       })
       .eq("id", recordingId);
 
+    if (saveError) {
+      console.error("❌ Failed to save transcript to database:", saveError);
+      throw saveError;
+    }
+
     console.log("✅ Transcription completed for recording:", recordingId);
   } catch (error) {
-    console.error("❌ Transcription failed:", error);
+    console.error("❌ Transcription failed for recording:", recordingId, error);
 
     // Update status to failed
-    await supabase
+    const { error: failError } = await supabase
       .from("recordings")
       .update({ transcription_status: "failed" })
       .eq("id", recordingId);
+
+    if (failError) {
+      console.error("❌ Failed to update status to failed:", failError);
+    }
   }
 }
 
