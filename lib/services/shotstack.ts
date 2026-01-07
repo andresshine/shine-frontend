@@ -40,6 +40,9 @@ const SHOTSTACK_API_URL = 'https://api.shotstack.io/v1';
 const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
 const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
 
+// Test video URL for Shotstack renders
+export const TEST_VIDEO_URL = 'https://stream.mux.com/aD9os6lEV3Rbl2FmUO9bY7OWdIEKhE2RCVsIWKwb6F4/medium.mp4';
+
 /**
  * Generate simple HTML asset for quote text overlay
  * Uses inline styles compatible with Shotstack's HTML renderer
