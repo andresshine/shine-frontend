@@ -142,6 +142,11 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
 
         if (data.status === "ready") {
           console.log("✅ Video processed successfully:", uploadId);
+          if (data.transcriptionError) {
+            console.error("⚠️ Transcription failed:", data.transcriptionError);
+          } else {
+            console.log("✅ Transcription completed successfully");
+          }
           return; // Done - video is ready in database
         } else if (data.status === "error") {
           console.error("❌ Video processing failed:", uploadId);

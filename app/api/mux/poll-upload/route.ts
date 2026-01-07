@@ -48,12 +48,14 @@ export async function POST(request: NextRequest) {
           .eq("id", recordingId);
 
         // Trigger transcription and AWAIT it (serverless functions terminate on response)
+        let transcriptionError: string | null = null;
         if (playbackId) {
           console.log("🎬 Triggering transcription before responding...");
           try {
             await triggerTranscription(recordingId, playbackId);
           } catch (err) {
             console.error("❌ Transcription failed:", err);
+            transcriptionError = err instanceof Error ? err.message : String(err);
             // Continue anyway - video is still ready
           }
         }
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
           status: "ready",
           assetId: asset.id,
           playbackId,
+          transcriptionError, // Include error for debugging
         });
       } else if (asset.status === "preparing") {
         return NextResponse.json({ status: "processing" });
