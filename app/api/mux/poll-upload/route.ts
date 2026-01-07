@@ -137,5 +137,8 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
     if (failError) {
       console.error("❌ Failed to update status to failed:", failError);
     }
+
+    // Re-throw so caller knows it failed
+    throw error;
   }
 }
