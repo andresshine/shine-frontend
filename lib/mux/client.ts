@@ -34,7 +34,7 @@ export async function createDirectUpload(corsOrigin: string = "*") {
       cors_origin: corsOrigin,
       new_asset_settings: {
         playback_policy: ["public"],
-        mp4_support: "capped-1080p", // Enable MP4 static renditions for transcription & Shotstack
+        mp4_support: "audio-only,capped-1080p", // Enable BOTH audio.m4a (for transcription) AND video MP4 (for Shotstack)
       },
     });
 
