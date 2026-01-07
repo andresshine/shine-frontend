@@ -89,24 +89,51 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Wait for a URL to become available (returns 200 OK)
+ */
+async function waitForUrl(url: string, maxAttempts: number = 10, interval: number = 3000): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        console.log(`✅ URL available after ${attempt} attempt(s):`, url);
+        return true;
+      }
+      console.log(`⏳ Waiting for static file generation... (attempt ${attempt}/${maxAttempts}, status: ${response.status})`);
+    } catch (e) {
+      console.log(`⏳ Waiting for static file generation... (attempt ${attempt}/${maxAttempts}, fetch error)`);
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+  }
+  return false;
+}
+
 async function triggerTranscription(recordingId: string, playbackId: string) {
-  // Try audio.m4a first, fall back to low.mp4 if not available
-  const audioUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
+  // Define URLs
+  const primaryUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
   const fallbackUrl = `https://stream.mux.com/${playbackId}/low.mp4`;
 
   console.log("📝 Starting transcription for recording:", recordingId);
+  console.log("🔍 Checking for static file availability...");
 
-  // Check if audio.m4a exists
-  let urlToUse = audioUrl;
-  try {
-    const headResponse = await fetch(audioUrl, { method: 'HEAD' });
-    if (!headResponse.ok) {
-      console.log("⚠️ audio.m4a not available (status:", headResponse.status, "), falling back to low.mp4");
+  // Wait for primary URL (audio.m4a)
+  let urlToUse: string | null = null;
+
+  if (await waitForUrl(primaryUrl, 10, 3000)) {
+    urlToUse = primaryUrl;
+  } else {
+    console.log("⚠️ audio.m4a not available after retries, trying low.mp4...");
+    if (await waitForUrl(fallbackUrl, 5, 3000)) {
       urlToUse = fallbackUrl;
     }
-  } catch (e) {
-    console.log("⚠️ Could not check audio.m4a, falling back to low.mp4");
-    urlToUse = fallbackUrl;
+  }
+
+  if (!urlToUse) {
+    throw new Error("Static files (audio.m4a and low.mp4) not available after maximum retries");
   }
 
   console.log("🔗 Using URL:", urlToUse);
