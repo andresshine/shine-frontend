@@ -23,19 +23,13 @@ function getMuxClient(): Mux {
   return muxClient;
 }
 
-// Export getter for backwards compatibility
-export const mux = {
-  get video() {
-    return getMuxClient().video;
-  },
-};
-
 /**
  * Create a direct upload URL for video upload
  * This allows the browser to upload directly to Mux
  */
 export async function createDirectUpload(corsOrigin: string = "*") {
   try {
+    const mux = getMuxClient();
     const upload = await mux.video.uploads.create({
       cors_origin: corsOrigin,
       new_asset_settings: {
@@ -60,6 +54,7 @@ export async function createDirectUpload(corsOrigin: string = "*") {
  */
 export async function getAsset(assetId: string) {
   try {
+    const mux = getMuxClient();
     const asset = await mux.video.assets.retrieve(assetId);
     return asset;
   } catch (error) {
@@ -73,6 +68,7 @@ export async function getAsset(assetId: string) {
  */
 export async function getUpload(uploadId: string) {
   try {
+    const mux = getMuxClient();
     const upload = await mux.video.uploads.retrieve(uploadId);
     return upload;
   } catch (error) {

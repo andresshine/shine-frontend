@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { mux } from "@/lib/mux/client";
+import { getUpload, getAsset } from "@/lib/mux/client";
 import { createClient } from "@supabase/supabase-js";
 import { transcribeFromUrl } from "@/lib/deepgram/client";
 
@@ -27,11 +27,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch upload from Mux
-    const upload = await mux.video.uploads.retrieve(uploadId);
+    const upload = await getUpload(uploadId);
 
     if (upload.asset_id) {
       // Asset has been created!
-      const asset = await mux.video.assets.retrieve(upload.asset_id);
+      const asset = await getAsset(upload.asset_id);
 
       if (asset.status === "ready") {
         const playbackId = asset.playback_ids?.[0]?.id;
@@ -89,7 +89,7 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
 
     await supabase
       .from("recordings")
-      .update({ transcript_status: "processing" })
+      .update({ transcription_status: "processing" })
       .eq("id", recordingId);
 
     // Use Mux static rendition URL (MP4 file)
@@ -102,8 +102,8 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
     await supabase
       .from("recordings")
       .update({
-        transcript,
-        transcript_status: "completed",
+        transcription: transcript,
+        transcription_status: "completed",
         updated_at: new Date().toISOString(),
       })
       .eq("id", recordingId);
@@ -113,7 +113,7 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
     console.error("Transcription failed:", error);
     await supabase
       .from("recordings")
-      .update({ transcript_status: "failed" })
+      .update({ transcription_status: "failed" })
       .eq("id", recordingId);
   }
 }
