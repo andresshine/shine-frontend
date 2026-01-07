@@ -111,27 +111,27 @@ async function waitForUrl(url: string, maxAttempts: number = 15, interval: numbe
 }
 
 async function triggerTranscription(recordingId: string, playbackId: string) {
-  // Define URLs
-  const primaryUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
-  const fallbackUrl = `https://stream.mux.com/${playbackId}/low.mp4`;
+  // Define URLs - use low.mp4 as primary (capped-1080p generates video MP4s, not audio.m4a)
+  const primaryUrl = `https://stream.mux.com/${playbackId}/low.mp4`;
+  const fallbackUrl = `https://stream.mux.com/${playbackId}/medium.mp4`;
 
   console.log("📝 Starting transcription for recording:", recordingId);
   console.log("🔍 Checking for static file availability...");
 
-  // Wait for primary URL (audio.m4a)
+  // Wait for primary URL (low.mp4)
   let urlToUse: string | null = null;
 
   if (await waitForUrl(primaryUrl, 30, 1000)) {  // 30 attempts, 1s apart = 30s max
     urlToUse = primaryUrl;
   } else {
-    console.log("⚠️ audio.m4a not available after retries, trying low.mp4...");
+    console.log("⚠️ low.mp4 not available after retries, trying medium.mp4...");
     if (await waitForUrl(fallbackUrl, 15, 1000)) {  // 15 attempts, 1s apart = 15s max
       urlToUse = fallbackUrl;
     }
   }
 
   if (!urlToUse) {
-    throw new Error("Static files (audio.m4a and low.mp4) not available after maximum retries");
+    throw new Error("Static MP4 files (low.mp4 and medium.mp4) not available after maximum retries");
   }
 
   console.log("🔗 Using URL:", urlToUse);
