@@ -21,7 +21,8 @@ export interface UseVideoRecorderResult {
   state: RecordingState;
   startRecording: (
     audioDeviceId?: string,
-    videoDeviceId?: string
+    videoDeviceId?: string,
+    externalStream?: MediaStream | null
   ) => Promise<void>;
   stopRecording: () => Promise<Blob | null>;
   pauseRecording: () => void;
@@ -47,96 +48,112 @@ export function useVideoRecorder(): UseVideoRecorderResult {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const isExternalStreamRef = useRef<boolean>(false); // Track if using external stream (e.g., from background blur)
 
   /**
-   * Start recording from webcam
+   * Start recording from webcam or external stream (for background blur)
    */
   const startRecording = useCallback(async (
     audioDeviceId?: string,
-    videoDeviceId?: string
+    videoDeviceId?: string,
+    externalStream?: MediaStream | null
   ) => {
     let stream: MediaStream | null = null; // Initialize stream to null
     let obtainedResolution: '1080p' | '720p' = '1080p'; // Track actual resolution obtained
 
     try {
-      const audioConstraints = audioDeviceId
-        ? {
-            deviceId: { exact: audioDeviceId },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 44100,
-          }
-        : {
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 44100,
-          };
-
-      // Attempt 1: Try 1080p exact resolution
-      const constraints1080p: MediaStreamConstraints = {
-        video: videoDeviceId
+      // If external stream provided (e.g., from background blur), use it directly
+      if (externalStream) {
+        stream = externalStream;
+        isExternalStreamRef.current = true; // Mark that we're using an external stream
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          const settings = videoTrack.getSettings();
+          obtainedResolution = (settings.height || 0) >= 1080 ? '1080p' : '720p';
+          console.log(`📹 Using external stream for recording: ${settings.width}x${settings.height}`);
+        }
+      } else {
+        isExternalStreamRef.current = false; // Mark that we're using internal stream
+        // Create new stream from camera
+        const audioConstraints = audioDeviceId
           ? {
-              deviceId: { exact: videoDeviceId },
-              width: { exact: 1920 }, // Force 1080p width
-              height: { exact: 1080 }, // Force 1080p height
-              aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+              deviceId: { exact: audioDeviceId },
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 44100,
             }
           : {
-              width: { exact: 1920 }, // Force 1080p width
-              height: { exact: 1080 }, // Force 1080p height
-              aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
-              facingMode: "user",
-            },
-        audio: audioConstraints,
-      };
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 44100,
+            };
 
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints1080p);
-        console.log("📹 Successfully obtained 1080p exact stream for recording.");
-      } catch (error) {
-        if (error instanceof OverconstrainedError) {
-          console.warn("📹 Failed to get 1080p exact stream, attempting 720p exact as fallback:", error);
-          // Attempt 2: Fallback to 720p exact resolution
-          const constraints720p: MediaStreamConstraints = {
-            video: videoDeviceId
-              ? {
-                  deviceId: { exact: videoDeviceId },
-                  width: { exact: 1280 }, // Force 720p width
-                  height: { exact: 720 }, // Force 720p height
-                  aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
-                }
-              : {
-                  width: { exact: 1280 }, // Force 720p width
-                  height: { exact: 720 }, // Force 720p height
-                  aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
-                  facingMode: "user",
-                },
-            audio: audioConstraints,
-          };
-          stream = await navigator.mediaDevices.getUserMedia(constraints720p);
-          obtainedResolution = '720p';
-          console.log("📹 Successfully obtained 720p exact stream for recording as fallback.");
-        } else {
-          // Not an OverconstrainedError, re-throw to be caught by the outer catch
-          throw error;
+        // Attempt 1: Try 1080p exact resolution
+        const constraints1080p: MediaStreamConstraints = {
+          video: videoDeviceId
+            ? {
+                deviceId: { exact: videoDeviceId },
+                width: { exact: 1920 }, // Force 1080p width
+                height: { exact: 1080 }, // Force 1080p height
+                aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+              }
+            : {
+                width: { exact: 1920 }, // Force 1080p width
+                height: { exact: 1080 }, // Force 1080p height
+                aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+                facingMode: "user",
+              },
+          audio: audioConstraints,
+        };
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints1080p);
+          console.log("📹 Successfully obtained 1080p exact stream for recording.");
+        } catch (error) {
+          if (error instanceof OverconstrainedError) {
+            console.warn("📹 Failed to get 1080p exact stream, attempting 720p exact as fallback:", error);
+            // Attempt 2: Fallback to 720p exact resolution
+            const constraints720p: MediaStreamConstraints = {
+              video: videoDeviceId
+                ? {
+                    deviceId: { exact: videoDeviceId },
+                    width: { exact: 1280 }, // Force 720p width
+                    height: { exact: 720 }, // Force 720p height
+                    aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+                  }
+                : {
+                    width: { exact: 1280 }, // Force 720p width
+                    height: { exact: 720 }, // Force 720p height
+                    aspectRatio: { exact: 16 / 9 }, // Force 16:9 aspect ratio
+                    facingMode: "user",
+                  },
+              audio: audioConstraints,
+            };
+            stream = await navigator.mediaDevices.getUserMedia(constraints720p);
+            obtainedResolution = '720p';
+            console.log("📹 Successfully obtained 720p exact stream for recording as fallback.");
+          } else {
+            // Not an OverconstrainedError, re-throw to be caught by the outer catch
+            throw error;
+          }
         }
+
+        const videoTrack = stream.getVideoTracks()[0];
+        const videoSettings = videoTrack.getSettings();
+        const videoAppliedConstraints = videoTrack.getConstraints();
+
+        // Task 3: Disable Chrome's Internal Downscaling
+        if (videoTrack.contentHint !== undefined) {
+          videoTrack.contentHint = 'detail';
+          console.log('📹 Video contentHint set to "detail".');
+        }
+
+        console.log(`📹 Camera: ${videoTrack.label} - ${videoSettings.width}x${videoSettings.height}`);
+        console.log('📹 Camera Applied Constraints:', videoAppliedConstraints);
       }
 
-      // If we reached here, a stream was successfully obtained (either 1080p or 720p)
+      // If we reached here, a stream was successfully obtained
       streamRef.current = stream;
-
-      const videoTrack = stream.getVideoTracks()[0];
-      const videoSettings = videoTrack.getSettings();
-      const videoAppliedConstraints = videoTrack.getConstraints();
-
-      // Task 3: Disable Chrome's Internal Downscaling
-      if (videoTrack.contentHint !== undefined) {
-        videoTrack.contentHint = 'detail';
-        console.log('📹 Video contentHint set to "detail".');
-      }
-
-      console.log(`📹 Camera: ${videoTrack.label} - ${videoSettings.width}x${videoSettings.height}`);
-      console.log('📹 Camera Applied Constraints:', videoAppliedConstraints);
 
 
       // Determine best supported mime type
@@ -235,11 +252,12 @@ export function useVideoRecorder(): UseVideoRecorderResult {
           recordingStream: null,
         }));
 
-        // Stop all tracks
-        if (streamRef.current) {
+        // Stop all tracks ONLY if not using an external stream
+        // External streams (e.g., from background blur) are managed externally
+        if (streamRef.current && !isExternalStreamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
         }
+        streamRef.current = null;
 
         // Clear timer
         if (timerRef.current) {

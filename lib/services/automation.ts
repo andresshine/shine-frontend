@@ -4,7 +4,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { produceTestimonial, ThemeConfig } from "./shotstack";
+import { produceTestimonial, ThemeConfig, CaptionConfig } from "./shotstack";
+import { jsonToSrt, DeepgramResult } from "@/lib/deepgram/utils";
 
 // ==================== CONFIGURATION ====================
 
@@ -33,6 +34,7 @@ interface RecordingData {
   question_index: number;
   mux_playback_id: string | null;
   transcription: string | null;
+  transcription_data: DeepgramResult | null; // Full Deepgram result with word timings
   video_status: string;
   transcription_status: string;
   duration_seconds: number | null;
@@ -117,6 +119,44 @@ function buildThemeConfig(brandCustomization: BrandCustomization | null): ThemeC
     backgroundType: "color",
     backgroundColor: "#1a1a2e",
   };
+}
+
+/**
+ * Upload SRT content to Supabase Storage and return public URL
+ */
+async function uploadSrtToStorage(
+  supabase: any, // Supabase client instance
+  recordingId: string,
+  srtContent: string
+): Promise<string | null> {
+  const fileName = `transcript-${recordingId}.srt`;
+  const bucket = 'captions';
+
+  try {
+    // Upload SRT file to storage
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, srtContent, {
+        contentType: 'text/plain',
+        upsert: true, // Overwrite if exists
+      });
+
+    if (error) {
+      console.error(`❌ Failed to upload SRT to storage:`, error);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(fileName);
+
+    console.log(`📝 SRT uploaded: ${urlData.publicUrl}`);
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error(`❌ Error uploading SRT:`, error);
+    return null;
+  }
 }
 
 // ==================== MAIN AUTOMATION FUNCTION ====================
@@ -228,6 +268,39 @@ export async function processReadyVideo(recordingId: string): Promise<ProcessRes
     const videoUrl = mp4Url;
     console.log(`🎥 Video source: ${videoUrl}`);
 
+    // ========== STEP 5.5: Generate and Upload SRT Captions ==========
+    let captionsConfig: CaptionConfig | undefined;
+
+    if (recordingData.transcription_data) {
+      console.log(`📝 Generating SRT captions from transcription data...`);
+
+      // Convert Deepgram result to SRT format
+      const srtContent = jsonToSrt(recordingData.transcription_data);
+
+      if (srtContent) {
+        // Upload SRT to Supabase Storage
+        const srtUrl = await uploadSrtToStorage(supabase, recordingId, srtContent);
+
+        if (srtUrl) {
+          captionsConfig = {
+            srtUrl,
+            fontFamily: 'Open Sans',
+            fontSize: 24,
+            fontColor: '#ffffff',
+            backgroundColor: '#000000',
+            backgroundOpacity: 0.5,
+            backgroundPadding: 10,
+            backgroundBorderRadius: 5,
+            position: 'bottom',
+            offsetY: 0.08,
+          };
+          console.log(`✅ Captions configured with SRT URL: ${srtUrl}`);
+        }
+      }
+    } else {
+      console.log(`⚠️ No transcription_data available, skipping captions`);
+    }
+
     // ========== STEP 6: Trigger Shotstack Post-Production ==========
     const result = await produceTestimonial({
       videoUrl,
@@ -235,6 +308,7 @@ export async function processReadyVideo(recordingId: string): Promise<ProcessRes
       theme,
       musicUrl: BRAND_MUSIC_URL,
       duration: recordingData.duration_seconds || 30,
+      captions: captionsConfig,
     });
 
     if (!result.success) {

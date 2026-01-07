@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { ProgressBar } from "./ProgressBar";
 import { QuestionDisplay } from "./QuestionDisplay";
 import { VideoContainer } from "./VideoContainer";
@@ -15,38 +15,38 @@ import { useVideoRecorder } from "@/lib/hooks/useVideoRecorder";
 import { useMediaDevices } from "@/lib/hooks/useMediaDevices";
 import { useInterview } from "@/lib/hooks/useInterview";
 import { useAnswerEvaluation } from "@/lib/hooks/useAnswerEvaluation";
+import { useBackgroundBlur } from "@/lib/hooks/useBackgroundBlur";
 
 export function MainContent() {
   const videoRecorder = useVideoRecorder();
   const mediaDevices = useMediaDevices();
   const interview = useInterview();
   const answerEvaluation = useAnswerEvaluation();
-  const streamRef = useRef<MediaStream | null>(null);
+
+  // Raw camera stream (before blur processing)
+  const rawStreamRef = useRef<MediaStream | null>(null);
+  const [rawStream, setRawStream] = useState<MediaStream | null>(null);
+
+  // Background blur processing
+  const backgroundBlur = useBackgroundBlur(rawStream, 15);
 
   // State to track actual video resolution and show guidance
   const [actualVideoResolution, setActualVideoResolution] = useState<{ width: number; height: number } | null>(null);
   const [showResolutionGuidance, setShowResolutionGuidance] = useState(false);
 
   // Initialize camera on mount and when devices change
+  // Note: isRecording is NOT in dependencies - we keep the raw stream alive during recording
+  // because background blur needs it to process frames for the MediaRecorder
   useEffect(() => {
     async function initCamera() {
-      // When recording starts, STOP the preview stream to prevent echo
-      if (videoRecorder.state.isRecording) {
-        if (streamRef.current) {
-          console.log('🎤 Stopping preview stream to prevent echo during recording');
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-        }
-        return;
-      }
-
       let stream: MediaStream | null = null; // Declare outside try block so catch can access it
 
       try {
         // Stop existing stream if any
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
+        if (rawStreamRef.current) {
+          rawStreamRef.current.getTracks().forEach((track) => track.stop());
+          rawStreamRef.current = null;
+          setRawStream(null);
         }
 
         const audioConstraints = mediaDevices.selectedAudioDevice
@@ -112,7 +112,8 @@ export function MainContent() {
         }
 
         // If we reached here, a stream was successfully obtained (either 1080p or 720p)
-        streamRef.current = stream;
+        rawStreamRef.current = stream;
+        setRawStream(stream);
 
         // Log stream info, actual resolution obtained for preview, and applied constraints
         const videoTrack = stream.getVideoTracks()[0];
@@ -148,7 +149,8 @@ export function MainContent() {
         if (stream) { // Use the local 'stream' variable here
           stream.getTracks().forEach((track) => track.stop());
         }
-        streamRef.current = null; // Ensure streamRef is cleared on error
+        rawStreamRef.current = null; // Ensure rawStreamRef is cleared on error
+        setRawStream(null);
       }
     }
 
@@ -157,13 +159,13 @@ export function MainContent() {
       initCamera();
     }
 
-    // Cleanup on unmount
+    // Cleanup on unmount or when devices change
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+      if (rawStreamRef.current) {
+        rawStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [mediaDevices.selectedAudioDevice, mediaDevices.selectedVideoDevice, mediaDevices.hasPermissions, videoRecorder.state.isRecording]);
+  }, [mediaDevices.selectedAudioDevice, mediaDevices.selectedVideoDevice, mediaDevices.hasPermissions]);
 
   return (
     <main
@@ -234,12 +236,37 @@ export function MainContent() {
       {/* Video and Controls Container */}
       <div className="px-4 md:px-8 pb-4 md:pb-8 flex-1 flex flex-col min-h-0">
         {/* Video Container - flex to allow shrinking */}
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col relative">
+          {/* Loading overlay while MediaPipe initializes */}
+          {backgroundBlur.isLoading && rawStream && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-[var(--brand-radius)]">
+              <div className="flex flex-col items-center gap-2 text-white">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <span className="text-sm">Initializing background blur...</span>
+              </div>
+            </div>
+          )}
+
           <VideoContainer
-            stream={videoRecorder.state.recordingStream || streamRef.current}
+            stream={videoRecorder.state.recordingStream || backgroundBlur.processedStream || rawStream}
             previewUrl={videoRecorder.state.previewUrl}
             isRecording={videoRecorder.state.isRecording}
           />
+
+          {/* Blur Toggle Button - positioned in corner of video */}
+          {backgroundBlur.processedStream && !videoRecorder.state.previewUrl && (
+            <button
+              onClick={backgroundBlur.toggleBlur}
+              className={`absolute bottom-4 right-4 z-20 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                backgroundBlur.isBlurEnabled
+                  ? "bg-brand-primary text-white"
+                  : "bg-gray-800/70 text-gray-300 hover:bg-gray-700/70"
+              }`}
+              title={backgroundBlur.isBlurEnabled ? "Disable background blur" : "Enable background blur"}
+            >
+              {backgroundBlur.isBlurEnabled ? "Blur: ON" : "Blur: OFF"}
+            </button>
+          )}
         </div>
 
         {/* Recording Controls with Evaluation */}
@@ -247,7 +274,7 @@ export function MainContent() {
           videoRecorder={videoRecorder}
           mediaDevices={mediaDevices}
           answerEvaluation={answerEvaluation}
-          previewStream={streamRef.current}
+          previewStream={backgroundBlur.processedStream || rawStream}
         />
       </div>
     </main>

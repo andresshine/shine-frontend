@@ -106,10 +106,11 @@ export function RecordingControls({ videoRecorder, mediaDevices, answerEvaluatio
 
       console.log('🎬 Starting recording with real-time evaluation');
 
-      // Start video recording
+      // Start video recording with the processed stream (includes background blur)
       await videoRecorder.startRecording(
         mediaDevices.selectedAudioDevice || undefined,
-        mediaDevices.selectedVideoDevice || undefined
+        mediaDevices.selectedVideoDevice || undefined,
+        previewStream // Pass the processed stream for recording
       );
 
       // Start speech recognition for evaluation

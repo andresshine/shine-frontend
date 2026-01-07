@@ -129,13 +129,14 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
     }
 
     // Transcribe audio
-    const { transcript } = await transcribeFromUrl(urlToUse);
+    const { transcript, fullResult } = await transcribeFromUrl(urlToUse);
 
-    // Save transcript to database
+    // Save transcript and full result (with word timings for captions) to database
     const { error: saveError } = await supabase
       .from("recordings")
       .update({
         transcription: transcript,
+        transcription_data: fullResult, // Full Deepgram result with word timings for SRT generation
         transcription_status: "completed",
         updated_at: new Date().toISOString(),
       })

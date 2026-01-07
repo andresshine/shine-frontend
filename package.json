@@ -13,6 +13,7 @@
     "@deepgram/sdk": "^4.11.3",
     "@elevenlabs/elevenlabs-js": "^2.28.0",
     "@google/generative-ai": "^0.24.1",
+    "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@mux/mux-node": "^12.8.1",
     "@mux/mux-player-react": "^3.10.2",
     "@mux/upchunk": "^3.5.0",

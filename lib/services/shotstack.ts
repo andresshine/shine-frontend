@@ -16,12 +16,26 @@ export interface ThemeConfig {
   backgroundColor?: string;
 }
 
+export interface CaptionConfig {
+  srtUrl: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontColor?: string;
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  backgroundPadding?: number;
+  backgroundBorderRadius?: number;
+  position?: 'top' | 'bottom';
+  offsetY?: number;
+}
+
 export interface ProduceTestimonialParams {
   videoUrl: string;
   quoteText: string;
   theme: ThemeConfig;
   musicUrl?: string;
   duration?: number;
+  captions?: CaptionConfig;
 }
 
 export interface ShotstackResponse {
@@ -87,10 +101,9 @@ body {
  * Build Shotstack JSON template for video composition
  */
 function buildShotstackTemplate(params: ProduceTestimonialParams) {
-  console.log("!!! DEPLOYMENT CHECK - FULL CANVAS CSS STRATEGY ACTIVE !!!");
-  console.log("!!! FULL CANVAS TIMESTAMP:", new Date().toISOString(), "!!!");
+  console.log("🎬 Building Shotstack template with captions support");
 
-  const { videoUrl, quoteText, theme, musicUrl, duration = 30 } = params;
+  const { videoUrl, quoteText, theme, musicUrl, duration = 30, captions } = params;
 
   // Determine background asset based on theme
   const backgroundAsset = theme.backgroundType === 'image' && theme.backgroundImageUrl
@@ -117,10 +130,38 @@ function buildShotstackTemplate(params: ProduceTestimonialParams) {
         volume: 0.18, // -15dB equivalent
       } : undefined,
 
-      // ========== VIDEO TRACKS (Track 0 = Top Layer, Track 1 = Bottom Layer) ==========
+      // ========== VIDEO TRACKS (Track 0 = Top Layer, higher tracks = lower layers) ==========
       tracks: [
-        // TRACK 0 (TOP): Text Overlay
-        {
+        // TRACK 0 (TOP): Captions - only if SRT URL provided
+        ...(captions?.srtUrl ? [{
+          clips: [
+            {
+              asset: {
+                type: 'caption',
+                src: captions.srtUrl,
+                font: {
+                  family: captions.fontFamily || 'Open Sans',
+                  size: captions.fontSize || 24,
+                  color: captions.fontColor || '#ffffff',
+                },
+                background: {
+                  color: captions.backgroundColor || '#000000',
+                  opacity: captions.backgroundOpacity ?? 0.5,
+                  padding: captions.backgroundPadding ?? 10,
+                  borderRadius: captions.backgroundBorderRadius ?? 5,
+                },
+              },
+              start: 0,
+              length: duration,
+              position: captions.position || 'bottom',
+              offset: {
+                y: captions.offsetY ?? 0.08,
+              },
+            },
+          ],
+        }] : []),
+        // TRACK 1: Quote Text Overlay (only if no captions, to avoid overlap)
+        ...(!captions?.srtUrl ? [{
           clips: [
             {
               asset: {
@@ -139,8 +180,8 @@ function buildShotstackTemplate(params: ProduceTestimonialParams) {
               },
             },
           ],
-        },
-        // TRACK 1 (BOTTOM): User Video
+        }] : []),
+        // TRACK 2 (BOTTOM): User Video
         {
           clips: [
             {
