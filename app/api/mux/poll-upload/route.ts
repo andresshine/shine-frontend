@@ -90,10 +90,26 @@ export async function POST(request: NextRequest) {
 }
 
 async function triggerTranscription(recordingId: string, playbackId: string) {
+  // Try audio.m4a first, fall back to low.mp4 if not available
   const audioUrl = `https://stream.mux.com/${playbackId}/audio.m4a`;
+  const fallbackUrl = `https://stream.mux.com/${playbackId}/low.mp4`;
 
   console.log("📝 Starting transcription for recording:", recordingId);
-  console.log("🔗 Using Audio URL:", audioUrl);
+
+  // Check if audio.m4a exists
+  let urlToUse = audioUrl;
+  try {
+    const headResponse = await fetch(audioUrl, { method: 'HEAD' });
+    if (!headResponse.ok) {
+      console.log("⚠️ audio.m4a not available (status:", headResponse.status, "), falling back to low.mp4");
+      urlToUse = fallbackUrl;
+    }
+  } catch (e) {
+    console.log("⚠️ Could not check audio.m4a, falling back to low.mp4");
+    urlToUse = fallbackUrl;
+  }
+
+  console.log("🔗 Using URL:", urlToUse);
 
   try {
     // Update status to processing
@@ -107,7 +123,7 @@ async function triggerTranscription(recordingId: string, playbackId: string) {
     }
 
     // Transcribe audio
-    const { transcript } = await transcribeFromUrl(audioUrl);
+    const { transcript } = await transcribeFromUrl(urlToUse);
 
     // Save transcript to database
     const { error: saveError } = await supabase
