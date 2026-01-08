@@ -1,12 +1,12 @@
 /**
  * Question Rules Configuration
- * Defines rules for evaluating common interview questions
+ * Defines rules for evaluating the 12 standard interview questions
  * Rules are checked before falling back to AI evaluation
  */
 
 export interface FollowUpRule {
   condition: string;          // Condition identifier
-  prompt: string;             // The follow-up prompt to show (6 words max)
+  prompt: string;             // The follow-up prompt to show
   checkFn?: (transcript: string, words: string[]) => boolean; // Optional custom check
 }
 
@@ -14,6 +14,7 @@ export interface QuestionRule {
   id: string;
   patterns: string[];         // Keywords/phrases to match question (lowercase)
   description: string;        // Human-readable description
+  extractionGoal: string;     // What we're trying to extract for the case study
 
   // What makes this answer complete
   completionCriteria: {
@@ -22,6 +23,8 @@ export interface QuestionRule {
     mustMentionAll?: string[];            // Must mention all of these
     hasMetric?: boolean;                  // Must contain a number/metric
     hasComparison?: boolean;              // Must have before/after language
+    hasSpecificFeature?: boolean;         // Must name a specific feature
+    hasNPSScore?: boolean;                // Must include a 0-10 score
   };
 
   // Follow-up prompts when answer is incomplete
@@ -45,7 +48,7 @@ export const METRIC_PATTERNS = [
   /\d+\s*(k|thousand|million)/i, // 5k, 5 thousand
   /(doubled|tripled|halved|quadrupled)/i,
   /(half|twice|triple)/i,
-  /\d+\s*(people|employees|users|customers|clients)/i,
+  /\d+\s*(people|employees|users|customers|clients|team)/i,
 ];
 
 // Patterns for detecting comparison/before-after language
@@ -67,368 +70,545 @@ export const ENTHUSIASM_PATTERNS = [
   /(transformed|revolutionized|completely changed)/i,
 ];
 
+// Patterns for negative emotions (pain points)
+export const PAIN_PATTERNS = [
+  /(frustrated|frustrating|overwhelmed|overwhelming)/i,
+  /(nightmare|painful|tedious|time-consuming)/i,
+  /(inefficient|broken|failing|struggling)/i,
+  /(staying late|working overtime|burning out)/i,
+  /(slipping through|falling behind|missing)/i,
+  /(manual|spreadsheet|excel|by hand)/i,
+];
+
+// Patterns for specific industries/verticals
+export const INDUSTRY_PATTERNS = [
+  /(b2b|b2c|saas|software|tech|technology)/i,
+  /(healthcare|fintech|finance|banking|insurance)/i,
+  /(e-commerce|ecommerce|retail|manufacturing)/i,
+  /(marketing|advertising|agency|consulting)/i,
+  /(real estate|logistics|education|edtech)/i,
+  /(startup|enterprise|smb|small business)/i,
+];
+
+// Patterns for job titles
+export const TITLE_PATTERNS = [
+  /(founder|ceo|cto|coo|cfo|chief)/i,
+  /(director|vp|vice president|head of)/i,
+  /(manager|lead|senior|principal)/i,
+  /(engineer|developer|designer|analyst)/i,
+  /(owner|president|partner|consultant)/i,
+  /(coordinator|specialist|administrator)/i,
+];
+
+// Patterns for competitor mentions
+export const COMPETITOR_PATTERNS = [
+  /(spreadsheet|excel|google sheets|airtable)/i,
+  /(manual|by hand|pen and paper)/i,
+  /(competitor|alternative|other tool|other solution)/i,
+  // Generic competitor pattern - will match any proper noun before "before"
+];
+
+// Patterns for NPS scores
+export const NPS_PATTERNS = [
+  /\b(10|nine|ten|9|8|seven|eight|7|6|six|5|five|4|four|3|three|2|two|1|one|0|zero)\b.*\b(out of|\/)\s*(10|ten)\b/i,
+  /\b(10|9|8|7|6|5|4|3|2|1|0)\b/,
+];
+
 /**
- * Common Interview Question Rules
- * These cover ~80% of typical testimonial interview questions
+ * The 12 Standard Interview Questions
+ * Each rule maps to a specific question in the interview flow
  */
 export const QUESTION_RULES: QuestionRule[] = [
   // ============================================
-  // INTRO / ROLE QUESTIONS
+  // Q1: ROLE, TEAM SIZE, INDUSTRY
   // ============================================
   {
-    id: 'role_intro',
+    id: 'q1_role_team_industry',
     patterns: [
       'what is your role',
-      'tell us about yourself',
-      'what do you do',
-      'your position',
-      'your title',
-      'introduce yourself',
-      'who are you',
-      'about yourself',
-    ],
-    description: 'Introduction and role questions',
-    completionCriteria: {
-      minWords: 8,
-      mustMentionAny: [
-        'founder', 'ceo', 'cto', 'coo', 'cfo', 'chief',
-        'director', 'manager', 'lead', 'head',
-        'engineer', 'developer', 'designer', 'analyst',
-        'owner', 'president', 'vp', 'vice president',
-        'coordinator', 'specialist', 'consultant',
-        'i am', 'i work', 'my role', 'i manage', 'i lead',
-      ],
-    },
-    followUps: [
-      {
-        condition: 'too_short',
-        prompt: 'What does your role involve?',
-        checkFn: (t, words) => words.length < 8,
-      },
-      {
-        condition: 'no_role_mentioned',
-        prompt: 'What is your title?',
-        checkFn: (t) => !/(founder|ceo|manager|director|lead|engineer|developer|owner|head|chief|analyst|designer|coordinator|specialist)/i.test(t),
-      },
-    ],
-    fastComplete: {
-      keywords: ['founder', 'ceo', 'owner', 'director', 'i run', 'i lead', 'i manage'],
-      minWords: 5,
-    },
-  },
-
-  {
-    id: 'company_team',
-    patterns: [
-      'company size',
       'team size',
-      'how big',
-      'how many people',
-      'how many employees',
-      'tell us about your company',
-      'about your team',
+      'industry',
+      'tell us about yourself',
+      'your role',
+      'your position',
+      'what do you do',
     ],
-    description: 'Company or team size questions',
+    description: 'Role, team size, and industry question',
+    extractionGoal: 'Build the "Customer Persona" for the case study',
     completionCriteria: {
-      minWords: 5,
-      hasMetric: true,
+      minWords: 12,
+      // Ideally has: job title + team size number + industry/vertical
     },
     followUps: [
       {
-        condition: 'no_number',
-        prompt: 'How many people on the team?',
-        checkFn: (t) => !/\d+/.test(t),
+        condition: 'missing_team_size',
+        prompt: 'Got it. To give us a sense of scale, how large is the team you\'re currently working with?',
+        checkFn: (t) => !METRIC_PATTERNS.some(p => p.test(t)) && !/team|people|employees/i.test(t),
+      },
+      {
+        condition: 'vague_industry',
+        prompt: 'And what specific industry or vertical does your company serve?',
+        checkFn: (t) => !INDUSTRY_PATTERNS.some(p => p.test(t)) && /(we do|we work in|we\'re in)\s*(sales|marketing|tech|business)/i.test(t),
+      },
+      {
+        condition: 'missing_title',
+        prompt: 'What is your job title?',
+        checkFn: (t) => !TITLE_PATTERNS.some(p => p.test(t)),
       },
     ],
     fastComplete: {
-      keywords: ['people', 'employees', 'team of', 'person', 'just me', 'solo'],
-      minWords: 3,
+      keywords: ['founder', 'ceo', 'cto', 'director', 'vp', 'head of'],
+      minWords: 15,
     },
   },
 
   // ============================================
-  // PROBLEM / PAIN POINT QUESTIONS
+  // Q2: PROBLEM BEFORE
   // ============================================
   {
-    id: 'problem_before',
+    id: 'q2_problem_before',
     patterns: [
+      'what problem',
       'before using',
+      'trying to solve',
       'challenge',
-      'problem',
       'pain point',
       'struggle',
-      'difficulty',
-      'issue',
-      'what was it like before',
-      'how did you handle',
-      'what were you using',
     ],
-    description: 'Questions about problems before the product',
+    description: 'Problem they were trying to solve before using the product',
+    extractionGoal: 'The "Before" state (The Pain)',
     completionCriteria: {
       minWords: 15,
       hasComparison: true,
     },
     followUps: [
       {
-        condition: 'no_specifics',
-        prompt: 'How much time did that take?',
-        checkFn: (t, words) => words.length < 15 && !METRIC_PATTERNS.some(p => p.test(t)),
+        condition: 'vague_inefficient',
+        prompt: 'What did that inefficiency look like in your day-to-day? Were you staying late, or was work slipping through the cracks?',
+        checkFn: (t) => /(inefficient|not efficient|wasn\'t efficient)/i.test(t) && !PAIN_PATTERNS.some(p => p.test(t)),
       },
       {
-        condition: 'vague_problem',
-        prompt: 'Can you give an example?',
-        checkFn: (t) => /(it was hard|difficult|challenging|not great|bad)/i.test(t) && !/(for example|like when|such as|specifically)/i.test(t),
+        condition: 'vague_scale',
+        prompt: 'What was breaking or holding you back from scaling before you brought us in?',
+        checkFn: (t) => /(needed to scale|wanted to scale|trying to scale|couldn\'t scale)/i.test(t) && t.split(/\s+/).length < 20,
+      },
+      {
+        condition: 'too_short',
+        prompt: 'Can you describe what that looked like day-to-day?',
+        checkFn: (t, words) => words.length < 15,
       },
     ],
     fastComplete: {
-      keywords: ['hours', 'days', 'manual', 'spreadsheet', 'frustrated', 'nightmare', 'impossible'],
+      keywords: ['frustrated', 'nightmare', 'hours', 'manual', 'spreadsheet', 'staying late', 'overwhelmed'],
       minWords: 12,
     },
   },
 
   // ============================================
-  // DISCOVERY / WHY QUESTIONS
+  // Q3: ALTERNATIVES / COMPETITORS
   // ============================================
   {
-    id: 'discovery',
+    id: 'q3_alternatives',
     patterns: [
-      'how did you find',
-      'how did you hear',
-      'how did you discover',
-      'what made you choose',
-      'why did you choose',
-      'what attracted you',
-      'why did you decide',
+      'alternatives',
+      'previous solutions',
+      'what were you using',
+      'why did you switch',
+      'before us',
+      'other tools',
     ],
-    description: 'How they discovered or chose the product',
+    description: 'Alternatives or previous solutions they were using',
+    extractionGoal: 'The "Competitor" or "Status Quo" (Spreadsheets/Manual work)',
+    completionCriteria: {
+      minWords: 12,
+    },
+    followUps: [
+      {
+        condition: 'mentioned_competitor',
+        prompt: 'What was the tipping point that made you leave that solution?',
+        // This triggers when they mention a competitor by name
+        checkFn: (t) => {
+          const hasCompetitor = COMPETITOR_PATTERNS.some(p => p.test(t));
+          const hasReason = /(because|since|but|however|problem was|issue was|didn\'t|couldn\'t|wasn\'t)/i.test(t);
+          return hasCompetitor && !hasReason;
+        },
+      },
+      {
+        condition: 'used_spreadsheets',
+        prompt: 'How sustainable was that? At what point did the spreadsheet process break down?',
+        checkFn: (t) => /(spreadsheet|excel|google sheets)/i.test(t) && !/(broke|break|unsustainable|couldn\'t|stopped working)/i.test(t),
+      },
+      {
+        condition: 'too_vague',
+        prompt: 'What specifically were you using before?',
+        checkFn: (t, words) => words.length < 10 && !COMPETITOR_PATTERNS.some(p => p.test(t)),
+      },
+    ],
+    fastComplete: {
+      keywords: ['switched from', 'moved from', 'replaced', 'tipping point', 'broke down', 'couldn\'t scale'],
+      minWords: 15,
+    },
+  },
+
+  // ============================================
+  // Q4: SETUP / ONBOARDING
+  // ============================================
+  {
+    id: 'q4_onboarding',
+    patterns: [
+      'setup',
+      'onboarding',
+      'getting started',
+      'implementation',
+      'first experience',
+    ],
+    description: 'Setup or onboarding experience',
+    extractionGoal: 'Time-to-Live (Speed & Ease)',
     completionCriteria: {
       minWords: 10,
     },
     followUps: [
       {
+        condition: 'said_fast',
+        prompt: 'That\'s great to hear. Roughly how long did it take from signing up to actually getting value from the tool?',
+        checkFn: (t) => /(fast|quick|easy|simple|straightforward)/i.test(t) && !METRIC_PATTERNS.some(p => p.test(t)),
+      },
+      {
+        condition: 'said_easy',
+        prompt: 'Did you need to get your engineering team involved, or were you able to do it yourself?',
+        checkFn: (t) => /(easy|simple|no problem|smooth)/i.test(t) && !/(engineer|developer|technical|myself|own|alone)/i.test(t),
+      },
+      {
+        condition: 'no_timeframe',
+        prompt: 'How long did the setup process take?',
+        checkFn: (t) => !METRIC_PATTERNS.some(p => p.test(t)) && !/(day|hour|minute|week|afternoon|morning)/i.test(t),
+      },
+    ],
+    fastComplete: {
+      keywords: ['minutes', 'hours', 'same day', 'afternoon', 'no engineering', 'self-serve', 'by myself'],
+      minWords: 8,
+    },
+  },
+
+  // ============================================
+  // Q5: INTEGRATION HURDLES
+  // ============================================
+  {
+    id: 'q5_integrations',
+    patterns: [
+      'integration',
+      'hurdles',
+      'connect',
+      'tech stack',
+      'tools',
+    ],
+    description: 'Integration hurdles or tech stack compatibility',
+    extractionGoal: 'Tech Stack compatibility',
+    completionCriteria: {
+      minWords: 8,
+    },
+    followUps: [
+      {
+        condition: 'no_hurdles',
+        prompt: 'Glad to hear it. What specific tools did you connect us with in your stack?',
+        checkFn: (t) => /(no hurdles|no issues|no problems|smooth|easy|fine)/i.test(t) && !/(salesforce|hubspot|slack|zapier|api|crm|erp)/i.test(t),
+      },
+      {
+        condition: 'had_hurdles',
+        prompt: 'Could you elaborate on the specific hurdle? Was it documentation or a technical mismatch?',
+        checkFn: (t) => /(hurdle|issue|problem|challenge|difficult)/i.test(t) && !/(documentation|technical|api|support|resolved)/i.test(t),
+      },
+      {
         condition: 'too_short',
-        prompt: 'What convinced you to try it?',
+        prompt: 'What tools did you need to integrate with?',
+        checkFn: (t, words) => words.length < 8,
+      },
+    ],
+    fastComplete: {
+      keywords: ['salesforce', 'hubspot', 'slack', 'zapier', 'api', 'webhook', 'crm', 'integrated with'],
+      minWords: 8,
+    },
+  },
+
+  // ============================================
+  // Q6: RESULTS (QUALITATIVE)
+  // ============================================
+  {
+    id: 'q6_results_qualitative',
+    patterns: [
+      'what results',
+      'since implementing',
+      'what has changed',
+      'how has it helped',
+      'difference',
+    ],
+    description: 'Qualitative results since implementing',
+    extractionGoal: 'The "After" state (Qualitative Success)',
+    completionCriteria: {
+      minWords: 15,
+      hasComparison: true,
+    },
+    followUps: [
+      {
+        condition: 'vague_better',
+        prompt: 'In what way? How has your daily workflow changed compared to how you did things before?',
+        checkFn: (t) => /(better|improved|good|great|nice)/i.test(t) && !COMPARISON_PATTERNS.some(p => p.test(t)),
+      },
+      {
+        condition: 'team_likes_it',
+        prompt: 'What specific changes has the team noticed in their morale or output?',
+        checkFn: (t) => /(team likes|team loves|everyone likes|popular)/i.test(t) && !/(morale|output|productivity|happier|faster)/i.test(t),
+      },
+      {
+        condition: 'too_short',
+        prompt: 'Can you describe how things are different now?',
+        checkFn: (t, words) => words.length < 12,
+      },
+    ],
+    fastComplete: {
+      keywords: ['workflow', 'process', 'before we', 'now we', 'used to', 'no longer', 'transformed'],
+      minWords: 15,
+    },
+  },
+
+  // ============================================
+  // Q7: METRICS / ROI (QUANTITATIVE)
+  // ============================================
+  {
+    id: 'q7_metrics_roi',
+    patterns: [
+      'specific metrics',
+      'roi',
+      'time-to-value',
+      'hours saved',
+      'numbers',
+      'quantify',
+    ],
+    description: 'Specific metrics or ROI',
+    extractionGoal: 'The "Hard Numbers" (The Headline) - MOST IMPORTANT FOR MARKETING',
+    completionCriteria: {
+      minWords: 10,
+      hasMetric: true,
+    },
+    followUps: [
+      {
+        condition: 'vague_time_saved',
+        prompt: 'If you had to estimate, how many hours per week do you think you\'ve saved?',
+        checkFn: (t) => /(saved time|save time|lot of time|saves us time)/i.test(t) && !/\d+\s*(hour|minute|day|week)/i.test(t),
+      },
+      {
+        condition: 'vague_revenue',
+        prompt: 'That\'s incredible. Can you put a rough percentage on that uplift? Even a ballpark helps.',
+        checkFn: (t) => /(revenue|sales|income|money).*?(up|increased|grew|better)/i.test(t) && !METRIC_PATTERNS.some(p => p.test(t)),
+      },
+      {
+        condition: 'no_numbers',
+        prompt: 'Even a conservative estimate would help - any rough numbers you can share?',
+        checkFn: (t) => !METRIC_PATTERNS.some(p => p.test(t)),
+      },
+    ],
+    fastComplete: {
+      keywords: ['percent', '%', 'hours', 'doubled', 'tripled', '2x', '3x', '10x', 'half'],
+      minWords: 8,
+    },
+  },
+
+  // ============================================
+  // Q8: KILLER FEATURE
+  // ============================================
+  {
+    id: 'q8_killer_feature',
+    patterns: [
+      'feature',
+      'capability',
+      'most value',
+      'most valuable',
+      'favorite',
+      'best part',
+    ],
+    description: 'Feature or capability that delivered most value',
+    extractionGoal: 'The "Killer Feature"',
+    completionCriteria: {
+      minWords: 12,
+      hasSpecificFeature: true,
+    },
+    followUps: [
+      {
+        condition: 'named_feature',
+        prompt: 'How do you use that specific feature in your weekly routine?',
+        // Triggers when they name something but don't explain usage
+        checkFn: (t) => {
+          const hasFeatureName = /(the |our )?\w+( feature| tool| functionality| capability)/i.test(t);
+          const hasUsage = /(use it|we use|I use|every|weekly|daily|when|helps us)/i.test(t);
+          return hasFeatureName && !hasUsage && t.split(/\s+/).length < 20;
+        },
+      },
+      {
+        condition: 'vague_automation',
+        prompt: 'Is there a specific automation or workflow trigger that has been the most game-changing for you?',
+        checkFn: (t) => /(automation|automates|automated)/i.test(t) && !/(trigger|workflow|rule|when|if.*then)/i.test(t),
+      },
+      {
+        condition: 'too_generic',
+        prompt: 'Which specific feature has made the biggest difference?',
+        checkFn: (t) => /(everything|all of it|ease of use|user friendly|simple)/i.test(t) && t.split(/\s+/).length < 15,
+      },
+    ],
+    fastComplete: {
+      keywords: ['reporting', 'dashboard', 'analytics', 'automation', 'integration', 'workflow', 'api'],
+      minWords: 15,
+    },
+  },
+
+  // ============================================
+  // Q9: LIMITATIONS / CHALLENGES
+  // ============================================
+  {
+    id: 'q9_limitations',
+    patterns: [
+      'limitation',
+      'challenge',
+      'issue',
+      'friction',
+      'improve',
+      'work around',
+    ],
+    description: 'Limitations or challenges experienced',
+    extractionGoal: 'Authentic/Balanced Feedback (builds trust in reviews)',
+    completionCriteria: {
+      minWords: 10,
+    },
+    followUps: [
+      {
+        condition: 'nothing_really',
+        prompt: 'We appreciate the praise, but we love honest feedback to help us improve. Was there anything that took a little getting used to at first?',
+        checkFn: (t) => /(nothing|no issues|no problems|can\'t think|perfect|everything\'s great)/i.test(t),
+      },
+      {
+        condition: 'mentioned_bug',
+        prompt: 'How did that impact your workflow, and are we handling it better now?',
+        checkFn: (t) => /(bug|glitch|error|crash|broke|didn\'t work)/i.test(t) && !/(fixed|resolved|better now|handled)/i.test(t),
+      },
+      {
+        condition: 'vague_learning_curve',
+        prompt: 'What specifically was tricky to learn at first?',
+        checkFn: (t) => /(learning curve|took time|getting used to)/i.test(t) && t.split(/\s+/).length < 15,
+      },
+    ],
+    fastComplete: {
+      keywords: ['workaround', 'figured out', 'got used to', 'initially', 'at first', 'learning curve', 'wish'],
+      minWords: 12,
+    },
+  },
+
+  // ============================================
+  // Q10: SUPPORT QUALITY
+  // ============================================
+  {
+    id: 'q10_support',
+    patterns: [
+      'support',
+      'responsive',
+      'help',
+      'customer service',
+      'team',
+    ],
+    description: 'Support responsiveness and effectiveness',
+    extractionGoal: 'Trust & Safety',
+    completionCriteria: {
+      minWords: 10,
+    },
+    followUps: [
+      {
+        condition: 'generic_good',
+        prompt: 'Do you remember a specific instance where the support team really came through for you?',
+        checkFn: (t) => /(good|great|fine|okay|helpful)/i.test(t) && !/(example|instance|time when|remember when|specifically)/i.test(t) && t.split(/\s+/).length < 15,
+      },
+      {
+        condition: 'too_short',
+        prompt: 'Can you describe your experience with our support team?',
+        checkFn: (t, words) => words.length < 8,
+      },
+    ],
+    fastComplete: {
+      keywords: ['fast response', 'quick', 'same day', 'solved', 'fixed', 'above and beyond', 'amazing support'],
+      minWords: 10,
+    },
+  },
+
+  // ============================================
+  // Q11: SURPRISE / DELIGHT
+  // ============================================
+  {
+    id: 'q11_surprise',
+    patterns: [
+      'surprised',
+      'surprise',
+      'unexpected',
+      'didn\'t expect',
+      'delight',
+    ],
+    description: 'What surprised them most',
+    extractionGoal: 'The "Delight" factor / Unexpected benefits',
+    completionCriteria: {
+      minWords: 12,
+    },
+    followUps: [
+      {
+        condition: 'generic_praise',
+        prompt: 'Was there any specific \'aha\' moment where you realized this tool was different from what you used before?',
+        checkFn: (t) => ENTHUSIASM_PATTERNS.some(p => p.test(t)) && !/(aha|moment|realized|discovered|didn\'t expect|surprised)/i.test(t) && t.split(/\s+/).length < 15,
+      },
+      {
+        condition: 'too_short',
+        prompt: 'What was the unexpected benefit you discovered?',
         checkFn: (t, words) => words.length < 10,
       },
     ],
     fastComplete: {
-      keywords: ['recommendation', 'colleague', 'search', 'google', 'review', 'friend', 'saw', 'demo'],
-      minWords: 8,
-    },
-  },
-
-  // ============================================
-  // RESULTS / IMPACT QUESTIONS
-  // ============================================
-  {
-    id: 'results_impact',
-    patterns: [
-      'results',
-      'impact',
-      'difference',
-      'changed',
-      'improved',
-      'benefits',
-      'what has changed',
-      'how has it helped',
-      'what improvements',
-    ],
-    description: 'Questions about results and impact',
-    completionCriteria: {
-      minWords: 15,
-      hasMetric: true,
-    },
-    followUps: [
-      {
-        condition: 'no_metric',
-        prompt: 'Any specific numbers on that?',
-        checkFn: (t) => !METRIC_PATTERNS.some(p => p.test(t)),
-      },
-      {
-        condition: 'vague_improvement',
-        prompt: 'Roughly how much improvement?',
-        checkFn: (t) => /(better|improved|faster|easier|more efficient)/i.test(t) && !METRIC_PATTERNS.some(p => p.test(t)),
-      },
-    ],
-    fastComplete: {
-      keywords: ['percent', '%', 'doubled', 'tripled', 'half the time', 'twice as', '10x', '2x', '5x'],
-      minWords: 10,
-    },
-  },
-
-  {
-    id: 'time_saved',
-    patterns: [
-      'time saved',
-      'how much time',
-      'save you time',
-      'faster',
-      'quicker',
-      'efficiency',
-    ],
-    description: 'Questions specifically about time savings',
-    completionCriteria: {
-      minWords: 10,
-      hasMetric: true,
-    },
-    followUps: [
-      {
-        condition: 'no_time_metric',
-        prompt: 'How many hours per week?',
-        checkFn: (t) => !/\d+\s*(hours?|minutes?|days?|weeks?)/i.test(t) && !/(half|twice|double)/i.test(t),
-      },
-    ],
-    fastComplete: {
-      keywords: ['hours', 'minutes', 'days', 'half the time', 'twice as fast'],
-      minWords: 8,
-    },
-  },
-
-  // ============================================
-  // FEATURE / PRODUCT QUESTIONS
-  // ============================================
-  {
-    id: 'favorite_feature',
-    patterns: [
-      'favorite feature',
-      'favorite part',
-      'like most',
-      'love most',
-      'best feature',
-      'most valuable',
-      'most useful',
-      'standout feature',
-    ],
-    description: 'Questions about favorite features',
-    completionCriteria: {
-      minWords: 12,
-    },
-    followUps: [
-      {
-        condition: 'no_why',
-        prompt: 'Why is that your favorite?',
-        checkFn: (t) => !/(because|since|as it|helps me|allows me|makes it|saves)/i.test(t),
-      },
-      {
-        condition: 'too_generic',
-        prompt: 'What specifically about it?',
-        checkFn: (t, words) => words.length < 12 && /(everything|all of it|the whole thing)/i.test(t),
-      },
-    ],
-    fastComplete: {
-      keywords: ['because', 'allows me to', 'helps me', 'saves me', 'makes it easy', 'love how'],
-      minWords: 10,
-    },
-  },
-
-  {
-    id: 'daily_use',
-    patterns: [
-      'how do you use',
-      'day to day',
-      'daily basis',
-      'typical workflow',
-      'how often',
-      'walk me through',
-    ],
-    description: 'Questions about daily usage',
-    completionCriteria: {
-      minWords: 15,
-    },
-    followUps: [
-      {
-        condition: 'too_short',
-        prompt: 'What does that workflow look like?',
-        checkFn: (t, words) => words.length < 15,
-      },
-    ],
-    fastComplete: {
-      keywords: ['every day', 'daily', 'each morning', 'first thing', 'constantly', 'all the time', 'whenever'],
+      keywords: ['didn\'t expect', 'surprised', 'aha moment', 'realized', 'discovered', 'bonus', 'unexpected'],
       minWords: 12,
     },
   },
 
   // ============================================
-  // RECOMMENDATION / CLOSING QUESTIONS
+  // Q12: RECOMMENDATION / NPS
   // ============================================
   {
-    id: 'recommendation',
+    id: 'q12_recommendation',
     patterns: [
       'recommend',
-      'advice',
+      'score',
+      '0-10',
+      'scale',
+      'nps',
       'tell others',
-      'suggest to',
-      'what would you say',
-      'who should use',
     ],
-    description: 'Recommendation questions',
+    description: 'Recommendation and NPS score',
+    extractionGoal: 'NPS (Net Promoter Score) & The "Soundbite"',
     completionCriteria: {
       minWords: 10,
+      hasNPSScore: true,
     },
     followUps: [
       {
-        condition: 'no_audience',
-        prompt: 'Who would benefit most?',
-        checkFn: (t) => !/(anyone|everyone|people who|teams that|companies|businesses|if you)/i.test(t),
+        condition: 'number_only',
+        prompt: 'Thank you for that score! If you were describing us to a peer in your industry, how would you describe us in one sentence?',
+        checkFn: (t) => {
+          const hasNumber = NPS_PATTERNS.some(p => p.test(t));
+          const hasExplanation = /(because|since|due to|reason|would say|describe)/i.test(t);
+          return hasNumber && !hasExplanation && t.split(/\s+/).length < 15;
+        },
+      },
+      {
+        condition: 'no_number',
+        prompt: 'On a scale of 0-10, how likely would you be to recommend us?',
+        checkFn: (t) => !NPS_PATTERNS.some(p => p.test(t)) && !/\b(10|9|8|7|6|5|4|3|2|1|0)\b/.test(t),
       },
     ],
     fastComplete: {
-      keywords: ['definitely', 'absolutely', 'highly recommend', 'must have', 'no brainer', 'essential'],
-      minWords: 8,
-    },
-  },
-
-  {
-    id: 'closing_thoughts',
-    patterns: [
-      'anything else',
-      'final thoughts',
-      'want to add',
-      'in closing',
-      'sum up',
-      'last thing',
-    ],
-    description: 'Closing/wrap-up questions',
-    completionCriteria: {
-      minWords: 8,
-    },
-    followUps: [],
-    fastComplete: {
-      keywords: ['thank', 'great', 'love', 'happy', 'glad', 'appreciate'],
-      minWords: 5,
-    },
-  },
-
-  // ============================================
-  // COMPARISON QUESTIONS
-  // ============================================
-  {
-    id: 'vs_competitors',
-    patterns: [
-      'compared to',
-      'different from',
-      'vs',
-      'versus',
-      'other solutions',
-      'other tools',
-      'alternatives',
-      'switch from',
-    ],
-    description: 'Comparison with competitors',
-    completionCriteria: {
+      keywords: ['definitely', 'absolutely', '10 out of', '10/10', 'highly recommend', 'no brainer'],
       minWords: 15,
-      hasComparison: true,
-    },
-    followUps: [
-      {
-        condition: 'no_specifics',
-        prompt: 'What makes it stand out?',
-        checkFn: (t, words) => words.length < 15,
-      },
-    ],
-    fastComplete: {
-      keywords: ['better because', 'unlike', 'whereas', 'the difference is', 'stands out'],
-      minWords: 12,
     },
   },
 ];

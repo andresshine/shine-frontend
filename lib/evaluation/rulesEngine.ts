@@ -9,6 +9,10 @@ import {
   METRIC_PATTERNS,
   COMPARISON_PATTERNS,
   ENTHUSIASM_PATTERNS,
+  PAIN_PATTERNS,
+  INDUSTRY_PATTERNS,
+  TITLE_PATTERNS,
+  NPS_PATTERNS,
   QuestionRule,
 } from './questionRules';
 
@@ -43,6 +47,47 @@ function hasEnthusiasm(text: string): boolean {
 }
 
 /**
+ * Check if text contains pain point language
+ */
+function hasPainPoint(text: string): boolean {
+  return PAIN_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
+ * Check if text mentions a specific industry/vertical
+ */
+function hasIndustry(text: string): boolean {
+  return INDUSTRY_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
+ * Check if text mentions a job title
+ */
+function hasTitle(text: string): boolean {
+  return TITLE_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
+ * Check if text contains a specific feature name (not generic praise)
+ */
+function hasSpecificFeature(text: string): boolean {
+  // Must mention something specific, not just "ease of use" or "everything"
+  const genericPhrases = /(everything|all of it|ease of use|user friendly|simple|the whole thing)/i;
+  const specificFeature = /(reporting|dashboard|analytics|automation|integration|workflow|api|notification|alert|export|import|sync|template|scheduler|trigger)/i;
+
+  // Has specific feature name and not just generic praise
+  return specificFeature.test(text) ||
+    (/(the |our )?\w+( feature| tool| functionality| capability| module)/i.test(text) && !genericPhrases.test(text));
+}
+
+/**
+ * Check if text contains an NPS score (0-10)
+ */
+function hasNPSScore(text: string): boolean {
+  return NPS_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
  * Find the best matching rule for a question
  */
 function findMatchingRule(question: string): QuestionRule | null {
@@ -74,16 +119,16 @@ function findMatchingRule(question: string): QuestionRule | null {
 function extractValue(transcript: string, rule: QuestionRule | null): string | null {
   const values: string[] = [];
 
+  // Extract metrics (time, %, money, etc.)
   if (hasMetric(transcript)) {
-    // Try to extract the actual metric
-    const metricMatch = transcript.match(/\d+\s*(%|percent|x|times|hours?|days?|minutes?|weeks?)/i);
+    const metricMatch = transcript.match(/\d+\s*(%|percent|x|times|hours?|days?|minutes?|weeks?|k|thousand|million|\$)/i);
     if (metricMatch) {
       values.push(`Metric: "${metricMatch[0]}"`);
     }
   }
 
+  // Extract enthusiastic quotes
   if (hasEnthusiasm(transcript)) {
-    // Try to extract the enthusiastic phrase
     for (const pattern of ENTHUSIASM_PATTERNS) {
       const match = transcript.match(pattern);
       if (match) {
@@ -93,8 +138,58 @@ function extractValue(transcript: string, rule: QuestionRule | null): string | n
     }
   }
 
+  // Extract pain points (valuable for "before" state)
+  if (hasPainPoint(transcript)) {
+    for (const pattern of PAIN_PATTERNS) {
+      const match = transcript.match(pattern);
+      if (match) {
+        values.push(`Pain: "${match[0]}"`);
+        break;
+      }
+    }
+  }
+
+  // Note before/after comparisons
   if (hasComparison(transcript)) {
-    values.push('Before/after comparison included');
+    values.push('Before/after comparison');
+  }
+
+  // Extract job title
+  if (hasTitle(transcript)) {
+    for (const pattern of TITLE_PATTERNS) {
+      const match = transcript.match(pattern);
+      if (match) {
+        values.push(`Title: "${match[0]}"`);
+        break;
+      }
+    }
+  }
+
+  // Extract industry/vertical
+  if (hasIndustry(transcript)) {
+    for (const pattern of INDUSTRY_PATTERNS) {
+      const match = transcript.match(pattern);
+      if (match) {
+        values.push(`Industry: "${match[0]}"`);
+        break;
+      }
+    }
+  }
+
+  // Extract NPS score
+  if (hasNPSScore(transcript)) {
+    const scoreMatch = transcript.match(/\b(10|9|8|7|6|5|4|3|2|1|0)\b/);
+    if (scoreMatch) {
+      values.push(`NPS: ${scoreMatch[0]}`);
+    }
+  }
+
+  // Extract specific feature names
+  if (hasSpecificFeature(transcript)) {
+    const featureMatch = transcript.match(/(reporting|dashboard|analytics|automation|integration|workflow|api|notification|alert|export|import|sync|template|scheduler|trigger)/i);
+    if (featureMatch) {
+      values.push(`Feature: "${featureMatch[0]}"`);
+    }
   }
 
   if (values.length === 0) {
@@ -184,6 +279,16 @@ export function evaluateWithRules(
         meetsAllCriteria = false;
         failedCriteria.push('mustMentionAll');
       }
+    }
+
+    if (criteria.hasSpecificFeature && !hasSpecificFeature(transcript)) {
+      meetsAllCriteria = false;
+      failedCriteria.push('hasSpecificFeature');
+    }
+
+    if (criteria.hasNPSScore && !hasNPSScore(transcript)) {
+      meetsAllCriteria = false;
+      failedCriteria.push('hasNPSScore');
     }
 
     // If all criteria met, complete!
