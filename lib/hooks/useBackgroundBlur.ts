@@ -214,6 +214,8 @@ export function useBackgroundBlur(
 
           if (isBlurEnabledRef.current) {
             // ===== BLUR ENABLED: Composite sharp person over tinted blurred background =====
+            // Wrap in save/restore to prevent state leakage between composite operations
+            ctx.save();
 
             // Step 1: Draw the blurred background
             ctx.filter = `blur(${blurAmount}px)`;
@@ -232,8 +234,31 @@ export function useBackgroundBlur(
             ctx.globalCompositeOperation = "destination-over";
             ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-            // Reset composite operation
+            // Step 5: Apply cinematic vignette overlay (darkens edges/corners)
+            // Explicitly reset composite operation to ensure vignette draws on top
             ctx.globalCompositeOperation = "source-over";
+            // Calculate exact distance to corner for precise gradient coverage
+            const outerRadius = Math.sqrt(
+              Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2)
+            );
+            const vignetteGradient = ctx.createRadialGradient(
+              canvas.width / 2,  // Center X
+              canvas.height / 2, // Center Y
+              0,                 // Inner radius - start from true center
+              canvas.width / 2,  // Center X
+              canvas.height / 2, // Center Y
+              outerRadius        // Outer radius - exact corner distance
+            );
+            // DEBUG: Using RED to confirm vignette is drawing (change back to black later)
+            vignetteGradient.addColorStop(0, "rgba(255, 0, 0, 0)");     // Transparent center
+            vignetteGradient.addColorStop(0.3, "rgba(255, 0, 0, 0)");   // Keep center clear for face
+            vignetteGradient.addColorStop(0.6, "rgba(255, 0, 0, 0.2)"); // Start subtle fade
+            vignetteGradient.addColorStop(1, "rgba(255, 0, 0, 0.5)");   // Red corners for debugging
+            ctx.fillStyle = vignetteGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Restore canvas state
+            ctx.restore();
           } else {
             // ===== BLUR DISABLED: Just draw the original video =====
             ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);

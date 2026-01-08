@@ -17,16 +17,6 @@ export function SidebarActions() {
 
   return (
     <div className="p-8 pt-4 border-t border-border-light dark:border-gold/10">
-      {/* Tips Section */}
-      <div className="mb-4">
-        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
-          🤩 Tips
-        </p>
-        <p className="font-normal text-sm text-gray-600 dark:text-gray-400">
-          Look at the camera, speak slowly, answer fully, review recommendations, and use metrics and adjectives.
-        </p>
-      </div>
-
       <div className="flex gap-3">
         {/* Theme Toggle Button */}
         <button

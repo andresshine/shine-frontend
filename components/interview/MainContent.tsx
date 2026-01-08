@@ -29,8 +29,11 @@ export function MainContent() {
   const rawStreamRef = useRef<MediaStream | null>(null);
   const [rawStream, setRawStream] = useState<MediaStream | null>(null);
 
+  // Blur intensity control (5-30px range)
+  const [blurAmount, setBlurAmount] = useState(15);
+
   // Background blur processing with brand color tint
-  const backgroundBlur = useBackgroundBlur(rawStream, 15, brandCustomization.primaryColor);
+  const backgroundBlur = useBackgroundBlur(rawStream, blurAmount, brandCustomization.primaryColor);
 
   // State to track actual video resolution and show guidance
   const [actualVideoResolution, setActualVideoResolution] = useState<{ width: number; height: number } | null>(null);
@@ -201,39 +204,46 @@ export function MainContent() {
       {/* Question Display Area */}
       <QuestionDisplay />
 
-      {/* Real-time Feedback Area - Shown below question during recording */}
-      {videoRecorder.state.isRecording && (
-        <div className="px-4 md:px-8 pb-4 -mt-2">
-          <div className="px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-            {/* Feedback message */}
-            {answerEvaluation.evaluation?.isComplete ? (
-              <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                <Check className="w-4 h-4" />
-                Great answer! You can stop recording when ready.
-              </p>
-            ) : answerEvaluation.evaluation?.followUp ? (
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                💡 {answerEvaluation.evaluation.followUp}
-              </p>
-            ) : answerEvaluation.transcript.length > 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Keep going...
-              </p>
-            ) : (
-              <p className="text-sm text-gray-400 dark:text-gray-500">
-                Start speaking to answer the question
-              </p>
-            )}
+      {/* Agent Dialogue Area - Tips when idle, feedback when recording */}
+      <div className="px-4 md:px-8 pb-4 -mt-2">
+        <div className="px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+          {videoRecorder.state.isRecording ? (
+            <>
+              {/* Recording feedback */}
+              {answerEvaluation.evaluation?.isComplete ? (
+                <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  Great answer! You can stop recording when ready.
+                </p>
+              ) : answerEvaluation.evaluation?.followUp ? (
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  💡 {answerEvaluation.evaluation.followUp}
+                </p>
+              ) : answerEvaluation.transcript.length > 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Keep going...
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  Start speaking to answer the question
+                </p>
+              )}
 
-            {/* Transcript preview (optional, can be hidden) */}
-            {answerEvaluation.transcript && (
-              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 line-clamp-2 italic">
-                &quot;{answerEvaluation.transcript.slice(-150)}...&quot;
-              </p>
-            )}
-          </div>
+              {/* Transcript preview */}
+              {answerEvaluation.transcript && (
+                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 line-clamp-2 italic">
+                  &quot;{answerEvaluation.transcript.slice(-150)}...&quot;
+                </p>
+              )}
+            </>
+          ) : (
+            /* Tips shown when not recording */
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              🤩 <span className="font-medium text-gray-600 dark:text-gray-300">Tips:</span> Look at the camera, speak slowly, answer fully, review recommendations, and use metrics and adjectives.
+            </p>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Video and Controls Container */}
       <div className="px-4 md:px-8 pb-4 md:pb-8 flex-1 flex flex-col min-h-0">
@@ -256,6 +266,8 @@ export function MainContent() {
             isBlurEnabled={backgroundBlur.isBlurEnabled}
             onToggleBlur={backgroundBlur.toggleBlur}
             showBlurToggle={!!backgroundBlur.processedStream && !videoRecorder.state.previewUrl}
+            blurAmount={blurAmount}
+            onBlurAmountChange={setBlurAmount}
           />
         </div>
 

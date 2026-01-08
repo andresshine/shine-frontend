@@ -16,6 +16,8 @@ interface VideoContainerProps {
   isBlurEnabled?: boolean;
   onToggleBlur?: () => void;
   showBlurToggle?: boolean;
+  blurAmount?: number;
+  onBlurAmountChange?: (amount: number) => void;
 }
 
 export function VideoContainer({
@@ -24,7 +26,9 @@ export function VideoContainer({
   isRecording,
   isBlurEnabled,
   onToggleBlur,
-  showBlurToggle
+  showBlurToggle,
+  blurAmount = 15,
+  onBlurAmountChange
 }: VideoContainerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -56,32 +60,50 @@ export function VideoContainer({
         {/* Camera Status Badge */}
         <CameraStatus />
 
-        {/* Blur Toggle Button - top right corner */}
+        {/* Blur Controls - top right corner */}
         {showBlurToggle && (
-          <button
-            onClick={onToggleBlur}
-            className="absolute top-4 right-4 z-20 p-2 rounded-lg bg-white/60 dark:bg-black/60 backdrop-blur-sm transition-all hover:bg-white/80 dark:hover:bg-black/80"
-            title={isBlurEnabled ? "Disable background blur" : "Enable background blur"}
-          >
-            {/* Droplet Icon for Blur */}
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-gray-900 dark:text-white"
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            {/* Blur Intensity Slider - only show when blur is enabled */}
+            {isBlurEnabled && onBlurAmountChange && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/60 dark:bg-black/60 backdrop-blur-sm">
+                <input
+                  type="range"
+                  min="5"
+                  max="30"
+                  value={blurAmount}
+                  onChange={(e) => onBlurAmountChange(Number(e.target.value))}
+                  className="w-20 h-1 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-gray-900 dark:accent-white"
+                  title={`Blur intensity: ${blurAmount}px`}
+                />
+              </div>
+            )}
+
+            {/* Blur Toggle Button */}
+            <button
+              onClick={onToggleBlur}
+              className="p-2 rounded-lg bg-white/60 dark:bg-black/60 backdrop-blur-sm transition-all hover:bg-white/80 dark:hover:bg-black/80"
+              title={isBlurEnabled ? "Disable background blur" : "Enable background blur"}
             >
-              <path
-                d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill={isBlurEnabled ? "currentColor" : "none"}
-              />
-            </svg>
-          </button>
+              {/* Droplet Icon for Blur */}
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-gray-900 dark:text-white"
+              >
+                <path
+                  d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill={isBlurEnabled ? "currentColor" : "none"}
+                />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
     </div>
