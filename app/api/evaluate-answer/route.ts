@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { evaluateWithRules, getGenericFollowUp } from '@/lib/evaluation/rulesEngine';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -88,6 +89,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // =========================================
+    // STEP 1: Try rules-based evaluation first
+    // =========================================
+    const rulesResult = evaluateWithRules(question, transcript);
+
+    // If rules engine gave a definitive answer, use it (faster & cheaper)
+    if (!rulesResult.usedAI) {
+      console.log(`⚡ [Evaluation] Rules engine handled: ${rulesResult.ruleId || 'fallback'}`);
+
+      if (rulesResult.extractedValue) {
+        console.log('📊 Extracted testimonial value:', rulesResult.extractedValue);
+      }
+
+      return NextResponse.json({
+        isComplete: rulesResult.isComplete,
+        confidence: rulesResult.confidence,
+        followUp: rulesResult.followUp,
+        extractedValue: rulesResult.extractedValue,
+        evaluatedBy: 'rules',
+        ruleId: rulesResult.ruleId,
+      });
+    }
+
+    // =========================================
+    // STEP 2: Fall back to AI for nuanced cases
+    // =========================================
+    console.log(`🤖 [Evaluation] Falling back to AI (rule: ${rulesResult.ruleId || 'none'})`);
+
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
@@ -133,7 +162,11 @@ Respond with ONLY valid JSON, no markdown code blocks, no explanations before or
         console.log('📊 Extracted testimonial value:', result.extractedValue);
       }
 
-      return NextResponse.json(result);
+      return NextResponse.json({
+        ...result,
+        evaluatedBy: 'ai',
+        ruleId: rulesResult.ruleId, // Include which rule was attempted
+      });
     } catch (parseError) {
       console.error('Failed to parse Claude response:', text);
       // Default to complete on parse error to not block the user
@@ -141,7 +174,8 @@ Respond with ONLY valid JSON, no markdown code blocks, no explanations before or
         isComplete: true,
         confidence: 50,
         followUp: null,
-        reason: 'parse_error_defaulted'
+        reason: 'parse_error_defaulted',
+        evaluatedBy: 'error',
       });
     }
   } catch (error) {
@@ -151,7 +185,8 @@ Respond with ONLY valid JSON, no markdown code blocks, no explanations before or
       isComplete: true,
       confidence: 50,
       followUp: null,
-      reason: 'api_error_defaulted'
+      reason: 'api_error_defaulted',
+      evaluatedBy: 'error',
     });
   }
 }
