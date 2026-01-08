@@ -253,22 +253,10 @@ export function MainContent() {
             stream={videoRecorder.state.recordingStream || backgroundBlur.processedStream || rawStream}
             previewUrl={videoRecorder.state.previewUrl}
             isRecording={videoRecorder.state.isRecording}
+            isBlurEnabled={backgroundBlur.isBlurEnabled}
+            onToggleBlur={backgroundBlur.toggleBlur}
+            showBlurToggle={!!backgroundBlur.processedStream && !videoRecorder.state.previewUrl}
           />
-
-          {/* Blur Toggle Button - positioned in corner of video */}
-          {backgroundBlur.processedStream && !videoRecorder.state.previewUrl && (
-            <button
-              onClick={backgroundBlur.toggleBlur}
-              className={`absolute bottom-4 right-4 z-20 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                backgroundBlur.isBlurEnabled
-                  ? "bg-brand-primary text-white"
-                  : "bg-gray-800/70 text-gray-300 hover:bg-gray-700/70"
-              }`}
-              title={backgroundBlur.isBlurEnabled ? "Disable background blur" : "Enable background blur"}
-            >
-              {backgroundBlur.isBlurEnabled ? "Blur: ON" : "Blur: OFF"}
-            </button>
-          )}
         </div>
 
         {/* Recording Controls with Evaluation */}
