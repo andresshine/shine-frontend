@@ -4,7 +4,7 @@
  * Processes webcam stream to blur background while keeping person sharp
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
 // Declare global type for MediaPipe
 declare global {
@@ -66,14 +66,47 @@ interface SegmentationResults {
   image: CanvasImageSource;
 }
 
+/**
+ * Convert hex color to rgba string
+ * @param hex - Hex color string (e.g., "#8F84C2" or "8F84C2")
+ * @param alpha - Opacity value between 0 and 1
+ * @returns RGBA string (e.g., "rgba(143, 132, 194, 0.25)")
+ */
+function hexToRgba(hex: string, alpha: number): string {
+  // Remove # if present
+  const cleanHex = hex.replace(/^#/, "");
+
+  // Parse hex values
+  const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(cleanHex);
+
+  if (result) {
+    const r = parseInt(result[1], 16);
+    const g = parseInt(result[2], 16);
+    const b = parseInt(result[3], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // Fallback for invalid hex
+  return `rgba(0, 0, 0, ${alpha})`;
+}
+
 export function useBackgroundBlur(
   videoStream: MediaStream | null,
-  blurAmount: number = 15
+  blurAmount: number = 15,
+  tintHex?: string
 ): UseBackgroundBlurResult {
   const [processedStream, setProcessedStream] = useState<MediaStream | null>(null);
   const [isBlurEnabled, setIsBlurEnabled] = useState(true); // Enabled by default
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Memoize the tint RGBA string so we don't recalculate on every frame
+  const tintRgba = useMemo(() => {
+    if (!tintHex) {
+      return "rgba(0, 0, 0, 0.75)"; // Fallback: black tint
+    }
+    return hexToRgba(tintHex, 0.75); // 75% opacity for branded glass effect
+  }, [tintHex]);
 
   // Refs for MediaPipe and canvas
   const segmentationRef = useRef<SelfieSegmentation | null>(null);
@@ -83,11 +116,16 @@ export function useBackgroundBlur(
   const animationFrameRef = useRef<number | null>(null);
   const isProcessingRef = useRef(false);
   const isBlurEnabledRef = useRef(isBlurEnabled);
+  const tintRgbaRef = useRef(tintRgba);
 
-  // Keep ref in sync with state
+  // Keep refs in sync with state/memoized values
   useEffect(() => {
     isBlurEnabledRef.current = isBlurEnabled;
   }, [isBlurEnabled]);
+
+  useEffect(() => {
+    tintRgbaRef.current = tintRgba;
+  }, [tintRgba]);
 
   // Initialize MediaPipe and processing pipeline
   useEffect(() => {
@@ -175,22 +213,26 @@ export function useBackgroundBlur(
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           if (isBlurEnabledRef.current) {
-            // ===== BLUR ENABLED: Composite sharp person over blurred background =====
+            // ===== BLUR ENABLED: Composite sharp person over tinted blurred background =====
 
-            // Step 1: Draw the segmentation mask
-            ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
-
-            // Step 2: Use 'source-in' to keep only the person (masked area)
-            ctx.globalCompositeOperation = "source-in";
-            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
-            // Step 3: Use 'destination-over' to draw blurred background behind the person
-            ctx.globalCompositeOperation = "destination-over";
+            // Step 1: Draw the blurred background
             ctx.filter = `blur(${blurAmount}px)`;
             ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
-            // Reset filter and composite operation
             ctx.filter = "none";
+
+            // Step 2: Apply brand color tint over the blurred background
+            ctx.fillStyle = tintRgbaRef.current;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Step 3: Cut out the person area from the tinted blur using destination-out
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+
+            // Step 4: Draw the sharp person into the cut-out area
+            ctx.globalCompositeOperation = "destination-over";
+            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+            // Reset composite operation
             ctx.globalCompositeOperation = "source-over";
           } else {
             // ===== BLUR DISABLED: Just draw the original video =====

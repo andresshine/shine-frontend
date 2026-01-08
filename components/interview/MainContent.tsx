@@ -16,19 +16,21 @@ import { useMediaDevices } from "@/lib/hooks/useMediaDevices";
 import { useInterview } from "@/lib/hooks/useInterview";
 import { useAnswerEvaluation } from "@/lib/hooks/useAnswerEvaluation";
 import { useBackgroundBlur } from "@/lib/hooks/useBackgroundBlur";
+import { useBrandCustomization } from "@/lib/hooks/useBrandCustomization";
 
 export function MainContent() {
   const videoRecorder = useVideoRecorder();
   const mediaDevices = useMediaDevices();
   const interview = useInterview();
   const answerEvaluation = useAnswerEvaluation();
+  const [brandCustomization] = useBrandCustomization();
 
   // Raw camera stream (before blur processing)
   const rawStreamRef = useRef<MediaStream | null>(null);
   const [rawStream, setRawStream] = useState<MediaStream | null>(null);
 
-  // Background blur processing
-  const backgroundBlur = useBackgroundBlur(rawStream, 15);
+  // Background blur processing with brand color tint
+  const backgroundBlur = useBackgroundBlur(rawStream, 15, brandCustomization.primaryColor);
 
   // State to track actual video resolution and show guidance
   const [actualVideoResolution, setActualVideoResolution] = useState<{ width: number; height: number } | null>(null);
