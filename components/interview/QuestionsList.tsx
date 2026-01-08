@@ -2,34 +2,52 @@
 
 /**
  * QuestionsList Component
- * Displays current and upcoming questions with active/inactive states
+ * Displays current question prominently and upcoming questions
  */
 
 import { useInterview } from "@/lib/hooks/useInterview";
+import { useBrandCustomization } from "@/lib/hooks/useBrandCustomization";
 import { Question } from "@/lib/types/interview";
 
 interface QuestionItemProps {
   question: Question;
-  number: number;
   isActive: boolean;
+  isRecording?: boolean;
 }
 
-function QuestionItem({ question, number, isActive }: QuestionItemProps) {
+function QuestionItem({ question, isActive, isRecording }: QuestionItemProps) {
+  const [customization] = useBrandCustomization();
+
   return (
     <div
       className={`p-4 rounded-[var(--brand-radius)] transition-all ${
         isActive
-          ? "bg-brand-primary/5 dark:bg-brand-primary/10"
-          : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+          ? "bg-brand-primary/5 dark:bg-brand-primary/10 border-2 border-brand-primary/30"
+          : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
       }`}
     >
-      <p
-        className={`font-normal text-gray-900 dark:text-white ${
-          !isActive && "opacity-50"
-        }`}
-      >
-        <span className="inline">{number}.</span> {question.text}
-      </p>
+      <div className="flex items-start gap-3">
+        {/* Recording Indicator for Current Question */}
+        {isActive && (
+          <div
+            className={`flex-shrink-0 mt-1 w-3 h-3 rounded-full transition-colors ${
+              isRecording ? "animate-pulse" : ""
+            }`}
+            style={{
+              backgroundColor: isRecording
+                ? customization.secondaryColor  // Red when recording
+                : "#22c55e",                    // Green when idle (matching video container)
+            }}
+          />
+        )}
+        <p
+          className={`font-normal text-sm text-gray-900 dark:text-white flex-1 ${
+            !isActive && "opacity-60"
+          }`}
+        >
+          {question.text}
+        </p>
+      </div>
     </div>
   );
 }
@@ -37,42 +55,47 @@ function QuestionItem({ question, number, isActive }: QuestionItemProps) {
 export function QuestionsList() {
   const { state } = useInterview();
   const { questions } = state.session;
-  const { currentQuestionIndex } = state;
+  const { currentQuestionIndex, isRecording } = state;
 
-  // Show 4 questions at a time (current + next 3)
-  const visibleQuestions = questions.slice(
-    currentQuestionIndex,
-    currentQuestionIndex + 4
+  // Current question
+  const currentQuestion = questions[currentQuestionIndex];
+
+  // Next 2 questions only
+  const upcomingQuestions = questions.slice(
+    currentQuestionIndex + 1,
+    currentQuestionIndex + 3
   );
-
-  const remainingCount = questions.length - currentQuestionIndex;
-  const showOverlay = currentQuestionIndex + 4 < questions.length;
 
   return (
     <div className="relative flex-1 px-8 overflow-hidden">
-      <div className="flex flex-col gap-4">
-        {visibleQuestions.map((question, relativeIndex) => {
-          const actualIndex = currentQuestionIndex + relativeIndex;
-          const isActive = relativeIndex === 0;
+      {/* Current Question */}
+      {currentQuestion && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-2">
+            Current Question
+          </p>
+          <QuestionItem
+            question={currentQuestion}
+            isActive={true}
+            isRecording={isRecording}
+          />
+        </div>
+      )}
 
-          return (
-            <QuestionItem
-              key={question.id}
-              question={question}
-              number={actualIndex + 1}
-              isActive={isActive}
-            />
-          );
-        })}
-      </div>
-
-      {/* Questions Remaining Text */}
-      {showOverlay && (
-        <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none">
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {remainingCount} questions remaining...
-            </p>
+      {/* Up Next */}
+      {upcomingQuestions.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+            Up Next
+          </p>
+          <div className="flex flex-col gap-3">
+            {upcomingQuestions.map((question) => (
+              <QuestionItem
+                key={question.id}
+                question={question}
+                isActive={false}
+              />
+            ))}
           </div>
         </div>
       )}

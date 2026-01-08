@@ -16,29 +16,22 @@ interface QuestionsSidebarProps {
 export function QuestionsSidebar({ onBrandPanelToggle }: QuestionsSidebarProps) {
   return (
     <aside
-      className="hidden md:flex flex-col w-full md:w-1/3 bg-white dark:bg-gray-900 border-r border-border-light dark:border-gold/10"
+      className="hidden md:flex flex-col w-full md:w-1/3 h-screen bg-white dark:bg-gray-900 border-r border-border-light dark:border-gold/10"
       role="complementary"
       aria-label="Interview Questions"
     >
       {/* Company Branding */}
       <CompanyBranding onBrandPanelToggle={onBrandPanelToggle} />
 
-      {/* Questions Header */}
-      <div className="px-8 py-8">
-        <h2 className="text-gray-900 dark:text-white font-medium mb-3">
-          INTERVIEW QUESTIONS
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-500 leading-relaxed">
-          Click Start Recording to begin. While answering, look at the camera
-          as much as possible. When you&apos;re done, click Stop Recording.
-        </p>
+      {/* Questions List - takes remaining space */}
+      <div className="pt-6 flex-1 overflow-y-auto">
+        <QuestionsList />
       </div>
 
-      {/* Questions List */}
-      <QuestionsList />
-
-      {/* Sidebar Actions */}
-      <SidebarActions />
+      {/* Sidebar Actions - fixed at bottom */}
+      <div className="flex-shrink-0">
+        <SidebarActions />
+      </div>
     </aside>
   );
 }
