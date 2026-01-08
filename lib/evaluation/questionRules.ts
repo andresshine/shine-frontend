@@ -182,6 +182,24 @@ export const QUESTION_RULES: QuestionRule[] = [
       hasComparison: true,
     },
     followUps: [
+      // HARDCORE: Cost mining
+      {
+        condition: 'mentions_cost_no_number',
+        prompt: 'Are we talking about subscription cost or manual labor cost? Did you have an estimate of that wasted spend?',
+        checkFn: (t) => /(expensive|costly|cost us|costing|spending|wasting money)/i.test(t) && !METRIC_PATTERNS.some(p => p.test(t)),
+      },
+      // HARDCORE: Time mining
+      {
+        condition: 'mentions_slow_no_hours',
+        prompt: 'Roughly how many hours a week were you losing to that inefficiency before us?',
+        checkFn: (t) => /(slow|inefficient|time-consuming|took forever|taking too long|wasting time)/i.test(t) && !/\d+\s*(hour|minute|day|week)/i.test(t),
+      },
+      // HARDCORE: Adjective anchoring - stress
+      {
+        condition: 'mentions_stress_no_specifics',
+        prompt: 'What specific part of that process was causing the most headaches? Was it the manual entry or fear of errors?',
+        checkFn: (t) => /(stressful|messy|chaotic|disorganized|hectic|crazy)/i.test(t) && !/(manual|entry|error|mistake|data|report)/i.test(t),
+      },
       {
         condition: 'vague_inefficient',
         prompt: 'What did that inefficiency look like in your day-to-day? Were you staying late, or was work slipping through the cracks?',
@@ -223,10 +241,21 @@ export const QUESTION_RULES: QuestionRule[] = [
       minWords: 12,
     },
     followUps: [
+      // HARDCORE: Spreadsheet hours mining
+      {
+        condition: 'spreadsheets_no_hours',
+        prompt: 'If you had to guess, how many hours per week was the team burning just maintaining those spreadsheets?',
+        checkFn: (t) => /(spreadsheet|excel|google sheets|manual|by hand)/i.test(t) && !/\d+\s*(hour|minute|day|week)/i.test(t),
+      },
+      // HARDCORE: Adjective anchoring - complexity
+      {
+        condition: 'mentions_complex_no_specifics',
+        prompt: 'What specific workflow was the breaking point where you realized "this is just too hard"?',
+        checkFn: (t) => /(complex|complicated|hard|difficult|convoluted|messy)/i.test(t) && !/(workflow|process|step|task|report|update)/i.test(t),
+      },
       {
         condition: 'mentioned_competitor',
         prompt: 'What was the tipping point that made you leave that solution?',
-        // This triggers when they mention a competitor by name
         checkFn: (t) => {
           const hasCompetitor = COMPETITOR_PATTERNS.some(p => p.test(t));
           const hasReason = /(because|since|but|however|problem was|issue was|didn\'t|couldn\'t|wasn\'t)/i.test(t);
@@ -236,7 +265,7 @@ export const QUESTION_RULES: QuestionRule[] = [
       {
         condition: 'used_spreadsheets',
         prompt: 'How sustainable was that? At what point did the spreadsheet process break down?',
-        checkFn: (t) => /(spreadsheet|excel|google sheets)/i.test(t) && !/(broke|break|unsustainable|couldn\'t|stopped working)/i.test(t),
+        checkFn: (t) => /(spreadsheet|excel|google sheets)/i.test(t) && !/(broke|break|unsustainable|couldn\'t|stopped working|hour)/i.test(t),
       },
       {
         condition: 'too_vague',
@@ -268,6 +297,18 @@ export const QUESTION_RULES: QuestionRule[] = [
       minWords: 10,
     },
     followUps: [
+      // HARDCORE: Time-to-value mining
+      {
+        condition: 'fast_no_timeframe',
+        prompt: 'In terms of hours or days, how long was it from signing up to actually getting your first real result?',
+        checkFn: (t) => /(fast|quick|rapid|speedy|smooth|breeze)/i.test(t) && !/\d+\s*(hour|minute|day|week|afternoon|morning)/i.test(t),
+      },
+      // HARDCORE: Adjective anchoring - intuitive
+      {
+        condition: 'intuitive_no_specifics',
+        prompt: 'What specific part of the UI made it click for you? Was it the dashboard or the setup wizard?',
+        checkFn: (t) => /(intuitive|easy|simple|user-friendly|self-explanatory|obvious)/i.test(t) && !/(dashboard|wizard|interface|screen|button|menu|navigation)/i.test(t),
+      },
       {
         condition: 'said_fast',
         prompt: 'That\'s great to hear. Roughly how long did it take from signing up to actually getting value from the tool?',
@@ -308,6 +349,12 @@ export const QUESTION_RULES: QuestionRule[] = [
       minWords: 8,
     },
     followUps: [
+      // HARDCORE: Developer hours saved mining
+      {
+        condition: 'seamless_no_hours',
+        prompt: 'Roughly how many developer hours did you avoid by it being seamless?',
+        checkFn: (t) => /(seamless|smooth|easy|plug and play|out of the box|no code)/i.test(t) && !/\d+\s*(hour|day|week|developer|engineer)/i.test(t),
+      },
       {
         condition: 'no_hurdles',
         prompt: 'Glad to hear it. What specific tools did you connect us with in your stack?',
@@ -349,6 +396,12 @@ export const QUESTION_RULES: QuestionRule[] = [
       hasComparison: true,
     },
     followUps: [
+      // HARDCORE: Efficiency multiplier mining
+      {
+        condition: 'efficient_no_number',
+        prompt: 'If you had to put a number on it, would you say you are 2x faster now? 5x? What does that efficiency look like in numbers?',
+        checkFn: (t) => /(efficient|productive|faster|quicker|streamlined|optimized)/i.test(t) && !METRIC_PATTERNS.some(p => p.test(t)),
+      },
       {
         condition: 'vague_better',
         prompt: 'In what way? How has your daily workflow changed compared to how you did things before?',
@@ -391,6 +444,18 @@ export const QUESTION_RULES: QuestionRule[] = [
       hasMetric: true,
     },
     followUps: [
+      // HARDCORE: Money scale mining
+      {
+        condition: 'saved_money_no_amount',
+        prompt: 'Are we talking thousands or tens of thousands annually? Even a rough ballpark helps us tell your story.',
+        checkFn: (t) => /(saved money|save money|cost savings|reduced costs|cut costs|saving us money)/i.test(t) && !/\$\d+|\d+\s*(k|thousand|million|dollar)/i.test(t),
+      },
+      // HARDCORE: Team-wide hours aggregation
+      {
+        condition: 'saved_time_no_aggregate',
+        prompt: 'If you aggregated that across the whole team, how many total man-hours a month are you getting back?',
+        checkFn: (t) => /(saved time|save time|saves us time|time back|hours back)/i.test(t) && !/\d+\s*(hour|minute|day|week)/i.test(t),
+      },
       {
         condition: 'vague_time_saved',
         prompt: 'If you had to estimate, how many hours per week do you think you\'ve saved?',
@@ -433,10 +498,15 @@ export const QUESTION_RULES: QuestionRule[] = [
       hasSpecificFeature: true,
     },
     followUps: [
+      // HARDCORE: Adjective anchoring - automation/AI specifics
+      {
+        condition: 'automation_no_specifics',
+        prompt: 'Is there one specific "set it and forget it" automation that has delivered the most value?',
+        checkFn: (t) => /(automation|ai|artificial intelligence|machine learning|auto-|automated)/i.test(t) && !/(trigger|rule|workflow|when|if|schedule|alert|notification)/i.test(t),
+      },
       {
         condition: 'named_feature',
         prompt: 'How do you use that specific feature in your weekly routine?',
-        // Triggers when they name something but don't explain usage
         checkFn: (t) => {
           const hasFeatureName = /(the |our )?\w+( feature| tool| functionality| capability)/i.test(t);
           const hasUsage = /(use it|we use|I use|every|weekly|daily|when|helps us)/i.test(t);
@@ -519,6 +589,12 @@ export const QUESTION_RULES: QuestionRule[] = [
       minWords: 10,
     },
     followUps: [
+      // HARDCORE: Response time specifics
+      {
+        condition: 'fast_no_timeframe',
+        prompt: 'Are we talking response times in minutes or hours?',
+        checkFn: (t) => /(fast|quick|rapid|responsive|speedy|prompt)/i.test(t) && !/\d+\s*(minute|hour|day|second)/i.test(t),
+      },
       {
         condition: 'generic_good',
         prompt: 'Do you remember a specific instance where the support team really came through for you?',
@@ -554,6 +630,12 @@ export const QUESTION_RULES: QuestionRule[] = [
       minWords: 12,
     },
     followUps: [
+      // HARDCORE: Adjective anchoring - powerful task specifics
+      {
+        condition: 'powerful_no_task',
+        prompt: 'What is one specific complex task it handled that you didn\'t expect it to be able to do?',
+        checkFn: (t) => /(powerful|capable|robust|impressive|advanced)/i.test(t) && !/(task|workflow|process|report|analysis|calculation)/i.test(t),
+      },
       {
         condition: 'generic_praise',
         prompt: 'Was there any specific \'aha\' moment where you realized this tool was different from what you used before?',
@@ -591,6 +673,12 @@ export const QUESTION_RULES: QuestionRule[] = [
       hasNPSScore: true,
     },
     followUps: [
+      // HARDCORE: Adjective anchoring - game-changer P&L quantification
+      {
+        condition: 'game_changer_no_impact',
+        prompt: 'If you had to quantify the impact of this "game-changer" on your P&L or efficiency, what would you say?',
+        checkFn: (t) => /(game.?changer|life.?saver|transformative|revolutionary|incredible)/i.test(t) && !METRIC_PATTERNS.some(p => p.test(t)),
+      },
       {
         condition: 'number_only',
         prompt: 'Thank you for that score! If you were describing us to a peer in your industry, how would you describe us in one sentence?',
