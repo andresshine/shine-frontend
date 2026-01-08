@@ -15,9 +15,7 @@ interface QuestionItemProps {
   isRecording?: boolean;
 }
 
-function QuestionItem({ question, isActive, isRecording }: QuestionItemProps) {
-  const [customization] = useBrandCustomization();
-
+function QuestionItem({ question, isActive }: QuestionItemProps) {
   return (
     <div
       className={`p-4 rounded-[var(--brand-radius)] transition-all ${
@@ -26,34 +24,20 @@ function QuestionItem({ question, isActive, isRecording }: QuestionItemProps) {
           : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
       }`}
     >
-      <div className="flex items-start gap-3">
-        {/* Recording Indicator for Current Question */}
-        {isActive && (
-          <div
-            className={`flex-shrink-0 mt-1 w-3 h-3 rounded-full transition-colors ${
-              isRecording ? "animate-pulse" : ""
-            }`}
-            style={{
-              backgroundColor: isRecording
-                ? customization.secondaryColor  // Red when recording
-                : "#22c55e",                    // Green when idle (matching video container)
-            }}
-          />
-        )}
-        <p
-          className={`font-normal text-sm text-gray-900 dark:text-white flex-1 ${
-            !isActive && "opacity-60"
-          }`}
-        >
-          {question.text}
-        </p>
-      </div>
+      <p
+        className={`font-normal text-sm text-gray-900 dark:text-white ${
+          !isActive && "opacity-60"
+        }`}
+      >
+        {question.text}
+      </p>
     </div>
   );
 }
 
 export function QuestionsList() {
   const { state } = useInterview();
+  const [customization] = useBrandCustomization();
   const { questions } = state.session;
   const { currentQuestionIndex, isRecording } = state;
 
@@ -71,13 +55,25 @@ export function QuestionsList() {
       {/* Current Question */}
       {currentQuestion && (
         <div className="mb-4">
-          <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-2">
-            Current Question
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            {/* Recording Indicator */}
+            <div
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                isRecording ? "animate-pulse" : ""
+              }`}
+              style={{
+                backgroundColor: isRecording
+                  ? customization.secondaryColor  // Red when recording
+                  : "#22c55e",                    // Green when idle
+              }}
+            />
+            <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+              Current Question
+            </p>
+          </div>
           <QuestionItem
             question={currentQuestion}
             isActive={true}
-            isRecording={isRecording}
           />
         </div>
       )}

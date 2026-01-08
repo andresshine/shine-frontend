@@ -702,6 +702,118 @@ export const QUESTION_RULES: QuestionRule[] = [
 ];
 
 /**
+ * Universal Soft Adjective Catcher
+ * These trigger across ALL questions when someone uses vague adjectives without specifics
+ */
+export const SOFT_ADJECTIVE_FOLLOW_UPS: Array<{
+  adjectives: RegExp;
+  excludeIfHas: RegExp;
+  followUp: string;
+}> = [
+  // Speed/Time adjectives
+  {
+    adjectives: /(fast|quick|rapid|speedy|instant|immediate)/i,
+    excludeIfHas: /\d+\s*(hour|minute|day|week|second|month)/i,
+    followUp: 'In what way was it fast? Can you estimate in hours or days?',
+  },
+  {
+    adjectives: /(slow|sluggish|took forever|time-consuming|lengthy)/i,
+    excludeIfHas: /\d+\s*(hour|minute|day|week|second|month)/i,
+    followUp: 'How slow are we talking? Roughly how many hours or days?',
+  },
+  // Quality adjectives
+  {
+    adjectives: /(easy|simple|straightforward|intuitive|seamless)/i,
+    excludeIfHas: /(wizard|dashboard|interface|button|click|step|screen|\d+)/i,
+    followUp: 'What specifically made it easy? Which part or feature?',
+  },
+  {
+    adjectives: /(hard|difficult|complex|complicated|confusing)/i,
+    excludeIfHas: /(workflow|process|step|feature|part|specifically|\d+)/i,
+    followUp: 'What specifically was difficult? Which part or workflow?',
+  },
+  // Impact adjectives
+  {
+    adjectives: /(helpful|useful|valuable|beneficial)/i,
+    excludeIfHas: /(\d+|percent|%|hours|saved|reduced|increased|workflow|feature)/i,
+    followUp: 'In what way was it helpful? Any specific outcome or metric?',
+  },
+  {
+    adjectives: /(efficient|productive|streamlined|optimized)/i,
+    excludeIfHas: /(\d+|percent|%|x|times|faster|hours)/i,
+    followUp: 'How much more efficient? Would you say 2x? 5x? Any estimate?',
+  },
+  // Cost adjectives
+  {
+    adjectives: /(expensive|costly|pricey|cheap|affordable)/i,
+    excludeIfHas: /(\$\d+|\d+\s*(k|thousand|million|dollar|percent|%))/i,
+    followUp: 'Can you put a rough number on that? Even a ballpark helps.',
+  },
+  {
+    adjectives: /(saved money|cost savings|reduced costs|cut costs)/i,
+    excludeIfHas: /(\$\d+|\d+\s*(k|thousand|million|dollar|percent|%))/i,
+    followUp: 'Roughly how much? Thousands, tens of thousands annually?',
+  },
+  // Quality/Experience adjectives
+  {
+    adjectives: /(great|amazing|awesome|fantastic|incredible|excellent)/i,
+    excludeIfHas: /(because|specifically|feature|example|\d+|workflow)/i,
+    followUp: 'What specifically makes it great? Any concrete example?',
+  },
+  {
+    adjectives: /(bad|terrible|awful|horrible|poor)/i,
+    excludeIfHas: /(because|specifically|feature|example|\d+|workflow)/i,
+    followUp: 'What specifically was bad? Can you give an example?',
+  },
+  // Support adjectives
+  {
+    adjectives: /(responsive|prompt|attentive)/i,
+    excludeIfHas: /(\d+\s*(minute|hour|day)|same day|within)/i,
+    followUp: 'How responsive? Are we talking minutes or hours?',
+  },
+  // Scale adjectives
+  {
+    adjectives: /(big|huge|massive|significant|substantial)/i,
+    excludeIfHas: /(\d+|percent|%|x|times|doubled|tripled)/i,
+    followUp: 'How big of an impact? Can you quantify that?',
+  },
+  {
+    adjectives: /(small|minor|slight|little|minimal)/i,
+    excludeIfHas: /(\d+|percent|%|but|however|although)/i,
+    followUp: 'How small? Is there a rough number you can share?',
+  },
+  // Improvement adjectives
+  {
+    adjectives: /(better|improved|enhanced|upgraded)/i,
+    excludeIfHas: /(\d+|percent|%|x|times|before|after|used to|now)/i,
+    followUp: 'Better in what way? Can you compare before vs after?',
+  },
+  {
+    adjectives: /(worse|degraded|declined)/i,
+    excludeIfHas: /(\d+|percent|%|x|times|before|after|used to|now)/i,
+    followUp: 'Worse in what way? What changed specifically?',
+  },
+  // Reliability adjectives
+  {
+    adjectives: /(reliable|stable|consistent|dependable)/i,
+    excludeIfHas: /(uptime|\d+|percent|%|never|always|every time)/i,
+    followUp: 'How reliable? Any uptime or consistency metrics?',
+  },
+  // Flexibility adjectives
+  {
+    adjectives: /(flexible|customizable|adaptable|versatile)/i,
+    excludeIfHas: /(feature|option|setting|configuration|example|specifically)/i,
+    followUp: 'Flexible in what way? Which customization helped most?',
+  },
+  // Power adjectives
+  {
+    adjectives: /(powerful|robust|capable|strong)/i,
+    excludeIfHas: /(feature|task|workflow|specifically|example|handle)/i,
+    followUp: 'Powerful for what specifically? What task did it handle well?',
+  },
+];
+
+/**
  * Fallback rules for questions that don't match any defined patterns
  */
 export const FALLBACK_CONFIG = {

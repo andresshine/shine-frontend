@@ -6,6 +6,7 @@
 import {
   QUESTION_RULES,
   FALLBACK_CONFIG,
+  SOFT_ADJECTIVE_FOLLOW_UPS,
   METRIC_PATTERNS,
   COMPARISON_PATTERNS,
   ENTHUSIASM_PATTERNS,
@@ -85,6 +86,24 @@ function hasSpecificFeature(text: string): boolean {
  */
 function hasNPSScore(text: string): boolean {
   return NPS_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
+ * Check for soft adjectives without specifics (universal catcher)
+ * Returns a follow-up prompt if a soft adjective is found without supporting details
+ */
+function checkSoftAdjectives(text: string): string | null {
+  for (const rule of SOFT_ADJECTIVE_FOLLOW_UPS) {
+    // Check if the adjective is present
+    if (rule.adjectives.test(text)) {
+      // Check if they already provided specifics (exclusion pattern)
+      if (!rule.excludeIfHas.test(text)) {
+        console.log(`🎯 [RulesEngine] Soft adjective caught: ${rule.adjectives}`);
+        return rule.followUp;
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -319,6 +338,22 @@ export function evaluateWithRules(
       }
     }
 
+    // =========================================
+    // UNIVERSAL SOFT ADJECTIVE CATCHER
+    // Catches vague adjectives across ALL questions
+    // =========================================
+    const softAdjectiveFollowUp = checkSoftAdjectives(transcript);
+    if (softAdjectiveFollowUp) {
+      return {
+        isComplete: false,
+        confidence: 35,
+        followUp: softAdjectiveFollowUp,
+        extractedValue: null,
+        ruleId: rule.id,
+        usedAI: false,
+      };
+    }
+
     // If we have some content but criteria not fully met,
     // be lenient if there's enthusiasm or decent length
     if (wordCount >= 15 && (hasEnthusiasm(transcript) || hasMetric(transcript))) {
@@ -349,6 +384,19 @@ export function evaluateWithRules(
   // CASE 2: No matching rule - use fallback
   // =========================================
   console.log(`📋 [RulesEngine] No rule matched, using fallback config`);
+
+  // First, check for soft adjectives (universal catcher)
+  const fallbackSoftAdjectiveFollowUp = checkSoftAdjectives(transcript);
+  if (fallbackSoftAdjectiveFollowUp) {
+    return {
+      isComplete: false,
+      confidence: 35,
+      followUp: fallbackSoftAdjectiveFollowUp,
+      extractedValue: null,
+      ruleId: null,
+      usedAI: false,
+    };
+  }
 
   // Check if answer is substantial enough with enthusiasm/metrics
   const config = FALLBACK_CONFIG;
