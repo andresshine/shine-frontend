@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash([ -d /Users/travisk/Downloads/shine-frontend-main/node_modules ])",
+      "Bash(curl:*)"
+    ]
+  }
+}

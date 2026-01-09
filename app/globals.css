@@ -1,0 +1,458 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Custom Properties for dynamic brand customization */
+:root {
+  /* Brand customization variables - can be updated via JavaScript */
+  --brand-primary: #8f84c2;
+  --brand-primary-rgb: 143, 132, 194;
+  --brand-secondary: #fb7185;
+  --brand-secondary-rgb: 251, 113, 133;
+  --brand-tertiary: #b8860b;
+  --brand-tertiary-rgb: 184, 134, 11;
+  --brand-font-family: "IBM Plex Sans", sans-serif;
+
+  /* Shine border radius strategy */
+  --radius-button: 12px;      /* All buttons */
+  --radius-surface: 16px;     /* Video, large cards */
+  --radius-card: 12px;        /* Cards, dropdowns, sidebar */
+  --brand-radius: 12px;       /* Default (buttons) */
+
+  /* Cinematic accent colors */
+  --accent-lavender: #8f84c2;
+  --accent-lavender-rgb: 143, 132, 194;
+  --accent-gold: #EAB36C;
+  --accent-gold-rgb: 234, 179, 108;
+  --accent-green: #7bbf9a;
+  --accent-green-rgb: 123, 191, 154;
+
+  /* === LIGHT MODE WARM BACKGROUNDS === */
+
+  /* Pure white */
+  --background: #FFFFFF;
+  --card-bg: #FFFFFF;
+
+  /* Warm cream family (3 shades for hierarchy) */
+  --card-bg-warm: #FAF9F6;           /* Primary warm cream */
+  --card-bg-warm-medium: #F5F3EF;    /* Deeper warm (nested cards) */
+  --card-bg-warm-subtle: #FAF9F6;    /* Barely-there warm (hover states) */
+
+  /* Semantic surface tokens (map to warm colors) */
+  --surface: #FAF9F6;                /* Use warm, not slate-50 */
+  --surface-subtle: #F5F3EF;         /* Use warm, not slate-100 */
+  --surface-hover: #FAF9F6;          /* Hover states */
+}
+
+@layer base {
+  * {
+    @apply border-border-light dark:border-border-dark;
+  }
+
+  html {
+    @apply scroll-smooth;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-background-light text-foreground-light dark:bg-background-dark dark:text-foreground-dark;
+    @apply font-sans antialiased;
+    @apply transition-colors duration-200;
+    /* Safe area padding for notched phones */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Prevent text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Smooth touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent selection on buttons */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Typography defaults */
+  h1 {
+    @apply text-2xl font-medium leading-tight;
+  }
+
+  h2 {
+    @apply text-xl font-medium leading-snug;
+  }
+
+  h3 {
+    @apply text-lg font-medium leading-normal;
+  }
+
+  p {
+    @apply font-normal leading-relaxed;
+  }
+
+  /* Responsive typography */
+  @media (max-width: 768px) {
+    h1 {
+      @apply text-xl;
+    }
+
+    h2 {
+      @apply text-lg;
+    }
+
+    h3 {
+      @apply text-base;
+    }
+  }
+
+  /* ========================================================================
+   * LANDSCAPE ORIENTATION OPTIMIZATION
+   * Adjusts layout for mobile devices in landscape mode
+   * ======================================================================== */
+
+  /* Mobile landscape - tighter vertical spacing */
+  @media (max-height: 500px) and (orientation: landscape) {
+    /* Reduce padding on main content */
+    .interview-content {
+      padding-top: 0.5rem !important;
+      padding-bottom: 0.5rem !important;
+    }
+
+    /* Smaller question text in landscape */
+    .question-text {
+      font-size: 1rem !important;
+      line-height: 1.4 !important;
+    }
+
+    /* Compact recording controls */
+    .recording-controls {
+      padding-top: 0.5rem !important;
+      gap: 0.5rem !important;
+    }
+
+    /* Hide non-essential elements in landscape */
+    .hide-in-landscape {
+      display: none !important;
+    }
+  }
+
+  /* Tablet landscape - moderate adjustments */
+  @media (min-height: 501px) and (max-height: 700px) and (orientation: landscape) {
+    .interview-content {
+      padding-top: 0.75rem !important;
+      padding-bottom: 0.75rem !important;
+    }
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    @apply text-muted-foreground-light dark:text-muted-foreground-dark;
+  }
+
+  /* Screen reader only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Screen reader only - but focusable */
+  .sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* ==========================================================================
+   * ACCESSIBILITY - Focus Indicators
+   * Visible focus indicators for keyboard navigation (WCAG 2.4.7)
+   * ========================================================================== */
+
+  /* Default focus ring - uses brand color */
+  .focus-ring {
+    @apply outline-none ring-2 ring-[var(--brand-primary)] ring-offset-2;
+    @apply ring-offset-background-light dark:ring-offset-background-dark;
+  }
+
+  /* Focus visible - only show on keyboard navigation */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-[var(--brand-primary)] ring-offset-2;
+    @apply ring-offset-background-light dark:ring-offset-background-dark;
+  }
+
+  /* High contrast focus for critical actions */
+  .focus-ring-high-contrast:focus-visible {
+    @apply ring-4 ring-[var(--brand-primary)];
+    box-shadow: 0 0 0 4px var(--brand-primary), 0 0 0 6px white;
+  }
+
+  /* Skip link styles */
+  .skip-link {
+    @apply sr-only;
+  }
+
+  .skip-link:focus {
+    @apply not-sr-only fixed top-4 left-4 z-[9999];
+    @apply px-4 py-2 rounded-[var(--brand-radius)];
+    @apply bg-[var(--brand-primary)] text-white font-semibold;
+    @apply shadow-lg;
+  }
+
+  /* ==========================================================================
+   * ACCESSIBILITY - Reduced Motion
+   * Only applies when user explicitly enables reduced motion mode in app settings
+   * Browser's prefers-reduced-motion is NOT automatically respected to preserve
+   * the cinematic experience. Users who need reduced motion can enable it in
+   * the app's accessibility settings.
+   * ========================================================================== */
+
+  /* Reduced motion class - applied manually via app settings, not auto-detected */
+  .reduce-motion *,
+  .reduce-motion *::before,
+  .reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reduce-motion .animate-recording-pulse,
+  .reduce-motion .animate-countdown,
+  .reduce-motion .animate-backdrop-in {
+    animation: none !important;
+  }
+
+  /* ==========================================================================
+   * ACCESSIBILITY - High Contrast Mode
+   * Support for Windows High Contrast Mode
+   * ========================================================================== */
+
+  @media (forced-colors: active) {
+    /* Ensure borders are visible */
+    button,
+    input,
+    select,
+    textarea {
+      border: 2px solid currentColor;
+    }
+
+    /* Ensure focus is visible */
+    *:focus {
+      outline: 3px solid currentColor;
+      outline-offset: 2px;
+    }
+
+    /* Recording indicator must be visible */
+    .animate-recording-pulse {
+      background-color: Highlight;
+    }
+  }
+
+  /* ==========================================================================
+   * ACCESSIBILITY - Text Scaling
+   * Ensure text remains readable when scaled (WCAG 1.4.4)
+   * ========================================================================== */
+
+  /* Use relative units for better scaling */
+  html {
+    font-size: 100%; /* Respects user's browser font size setting */
+  }
+
+  /* Ensure minimum touch target size (WCAG 2.5.5) */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply rounded;
+    background-color: #E7E4DF;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #E7E4DF;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Backdrop blur utilities */
+  .backdrop-blur-glass {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* Top-light gradient for cards (studio lighting effect) */
+  .card-top-light {
+    position: relative;
+  }
+  .card-top-light::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  /* Light mode: subtle white gradient from top */
+  .light .card-top-light::before {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, transparent 100%);
+  }
+  /* Dark mode: subtle white glow from top */
+  .dark .card-top-light::before {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
+  }
+
+  /* Icon container backgrounds (colorful at low opacity) */
+  .icon-container-lavender {
+    background: rgba(143, 132, 194, 0.08);
+    border: 1px solid rgba(143, 132, 194, 0.15);
+  }
+  .dark .icon-container-lavender {
+    background: rgba(143, 132, 194, 0.10);
+    border: 1px solid rgba(143, 132, 194, 0.15);
+  }
+
+  .icon-container-gold {
+    background: rgba(184, 134, 11, 0.08);
+    border: 1px solid rgba(184, 134, 11, 0.30);
+  }
+  .dark .icon-container-gold {
+    background: rgba(184, 134, 11, 0.10);
+    border: 1px solid rgba(246, 210, 143, 0.25);
+  }
+
+  .icon-container-green {
+    background: rgba(123, 191, 154, 0.08);
+    border: 1px solid rgba(123, 191, 154, 0.15);
+  }
+  .dark .icon-container-green {
+    background: rgba(123, 191, 154, 0.10);
+    border: 1px solid rgba(123, 191, 154, 0.15);
+  }
+
+  /* Cinematic recording pulse animation */
+  .animate-recording-pulse {
+    animation: recording-pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+}
+
+/* Cinematic recording pulse keyframes - slow, elegant breathing effect */
+@keyframes recording-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+    box-shadow: 0 0 12px 4px rgba(239, 68, 68, 0.25);
+  }
+}
+
+/* Audio waveform animation - shows speech is being captured */
+@keyframes waveform {
+  0%, 100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-waveform-1 {
+  animation: waveform 0.8s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.animate-waveform-2 {
+  animation: waveform 0.6s ease-in-out infinite;
+  animation-delay: 0.1s;
+  transform-origin: bottom;
+}
+
+.animate-waveform-3 {
+  animation: waveform 0.5s ease-in-out infinite;
+  animation-delay: 0.2s;
+  transform-origin: bottom;
+}
+
+/* Cinematic countdown animation */
+@keyframes countdown-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  30% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.animate-countdown {
+  animation: countdown-pop 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Film grain overlay effect */
+.film-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+}
+
+/* Countdown backdrop blur animation */
+@keyframes backdrop-fade-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+.animate-backdrop-in {
+  animation: backdrop-fade-in 0.3s ease-out forwards;
+}
