@@ -17,6 +17,7 @@ import { useInterview } from "@/lib/hooks/useInterview";
 import { useAnswerEvaluation } from "@/lib/hooks/useAnswerEvaluation";
 import { useBackgroundBlur } from "@/lib/hooks/useBackgroundBlur";
 import { useBrandCustomization } from "@/lib/hooks/useBrandCustomization";
+import { useLightingDetection } from "@/lib/hooks/useLightingDetection";
 
 export function MainContent() {
   const videoRecorder = useVideoRecorder();
@@ -34,6 +35,9 @@ export function MainContent() {
 
   // Background blur processing with brand color tint
   const backgroundBlur = useBackgroundBlur(rawStream, blurAmount, brandCustomization.primaryColor);
+
+  // Lighting detection for low-light warnings
+  const { isLowLight } = useLightingDetection(rawStream);
 
   // State to track actual video resolution and show guidance
   const [actualVideoResolution, setActualVideoResolution] = useState<{ width: number; height: number } | null>(null);
@@ -59,11 +63,13 @@ export function MainContent() {
               deviceId: { exact: mediaDevices.selectedAudioDevice },
               echoCancellation: true,
               noiseSuppression: true,
+              autoGainControl: true,
               sampleRate: 44100,
             }
           : {
               echoCancellation: true,
               noiseSuppression: true,
+              autoGainControl: true,
               sampleRate: 44100,
             };
 
@@ -237,10 +243,16 @@ export function MainContent() {
               )}
             </>
           ) : (
-            /* Tips shown when not recording */
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              🤩 <span className="font-medium text-gray-600 dark:text-gray-300">Tips:</span> Look at the camera, speak slowly, answer fully, review recommendations, and use metrics and adjectives.
-            </p>
+            /* Idle state: Show lighting warning or tips */
+            isLowLight ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                💡 <span className="font-medium">Lighting Check:</span> It looks a bit dark here. Facing a window or turning on a light will make you look much better!
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                🤩 <span className="font-medium text-gray-600 dark:text-gray-300">Tips:</span> Look at the camera, speak slowly, answer fully, review recommendations, and use metrics and adjectives.
+              </p>
+            )
           )}
         </div>
       </div>

@@ -80,11 +80,13 @@ export function useVideoRecorder(): UseVideoRecorderResult {
               deviceId: { exact: audioDeviceId },
               echoCancellation: true,
               noiseSuppression: true,
+              autoGainControl: true,
               sampleRate: 44100,
             }
           : {
               echoCancellation: true,
               noiseSuppression: true,
+              autoGainControl: true,
               sampleRate: 44100,
             };
 
